@@ -1,0 +1,22 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+}
+
+main {
+    padding: 20px;
+}
+
+nav {
+    display: flex;
+    gap: 20px;
+    padding: 20px;
+}
+
+nav a {
+    text-decoration: none;
+}
