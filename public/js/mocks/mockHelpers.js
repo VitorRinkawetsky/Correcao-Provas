@@ -42,6 +42,24 @@ export const getExamQuestions = (examId) => {
         .filter(Boolean);
 };
 
+export const getExamDetails = (examId) => {
+    const exam = getExamById(examId);
+
+    if (!exam) {
+        return null;
+    }
+
+    const questions = getExamQuestions(examId);
+    const totalScore = questions.reduce((total, question) => total + question.score, 0);
+
+    return {
+        ...exam,
+        questions,
+        questionCount: questions.length,
+        totalScore
+    };
+};
+
 export const getApplicationById = (id) => (
     applications.find((application) => application.id === id)
 );

@@ -14,6 +14,7 @@ export {
     getQuestionById,
     getExamById,
     getExamQuestions,
+    getExamDetails,
     getApplicationById,
     getApplicationsByExamId,
     getApplicationsByClassId,
