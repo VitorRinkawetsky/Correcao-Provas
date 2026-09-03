@@ -2,11 +2,14 @@
   "name": "correcao-provas",
   "version": "1.0.0",
   "description": "Aplicação web para correção de provas.",
-  "main": "index.js",
+  "main": "src/server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "vite build",
+    "test": "vitest run",
     "start": "node src/server.js",
-    "dev": "nodemon src/server.js"
+    "dev": "vite",
+    "dev:server": "nodemon src/server.js",
+    "preview": "vite preview"
   },
   "repository": {
     "type": "git",
@@ -21,11 +24,17 @@
   },
   "homepage": "https://github.com/VitorRinkawetsky/Correcao-Provas#readme",
   "dependencies": {
+    "@lucide/vue": "^1.40.0",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
-    "mysql2": "^3.23.3"
+    "mysql2": "^3.23.3",
+    "vue": "^3.5.42",
+    "vue-router": "^5.3.1"
   },
   "devDependencies": {
-    "nodemon": "^3.1.14"
+    "@vitejs/plugin-vue": "^6.0.8",
+    "nodemon": "^3.1.14",
+    "vite": "^8.2.2",
+    "vitest": "^5.0.0"
   }
 }

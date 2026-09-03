@@ -1,0 +1,44 @@
+:root {
+    --font-sans: "Aptos", "Inter", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+
+    --color-brand-50: #eaf7f4;
+    --color-brand-100: #d3efe9;
+    --color-brand-500: #23a58f;
+    --color-brand-600: #188b7b;
+    --color-brand-700: #146f63;
+    --color-brand-800: #13574f;
+    --color-brand-950: #102f2c;
+
+    --color-bg: #f4f7f6;
+    --color-surface: #ffffff;
+    --color-heading: #182724;
+    --color-text: #2e3f3b;
+    --color-muted: #6b7975;
+    --color-border: #dce4e1;
+    --color-border-soft: #edf1ef;
+    --color-warning-bg: #fff6df;
+    --color-warning-text: #8f6117;
+    --color-danger-bg: #fff0ef;
+    --color-danger-text: #a94440;
+
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 0.75rem;
+    --space-4: 1rem;
+    --space-5: 1.25rem;
+    --space-6: 1.5rem;
+    --space-8: 2rem;
+    --space-10: 2.5rem;
+    --space-12: 3rem;
+
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 22px;
+
+    --shadow-sm: 0 1px 2px rgba(19, 48, 43, 0.03), 0 8px 24px rgba(19, 48, 43, 0.045);
+    --shadow-md: 0 18px 45px rgba(15, 61, 54, 0.12);
+
+    --content-width: 1120px;
+    --header-height: 76px;
+}
