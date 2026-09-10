@@ -3,6 +3,11 @@ import { createRouter, createWebHistory } from 'vue-router';
 import AppShell from '../components/layout/AppShell.vue';
 import ExamDetailsView from '../views/ExamDetailsView.vue';
 import HomeView from '../views/HomeView.vue';
+import AplicacoesView from '../views/AplicacoesView.vue';
+import AplicacaoFormView from '../views/AplicacaoFormView.vue';
+import AplicacaoDetalhesView from '../views/AplicacaoDetalhesView.vue';
+import AplicacaoGerarView from '../views/AplicacaoGerarView.vue';
+import AplicacaoVersoesView from '../views/AplicacaoVersoesView.vue';
 
 const routes = [
     {
@@ -20,6 +25,36 @@ const routes = [
                 name: 'exam-details',
                 component: ExamDetailsView,
                 meta: { title: 'Detalhes da prova' }
+            },
+            {
+                path: 'aplicacoes',
+                name: 'applications',
+                component: AplicacoesView,
+                meta: { title: 'Aplicações' }
+            },
+            {
+                path: 'aplicacoes/nova',
+                name: 'application-create',
+                component: AplicacaoFormView,
+                meta: { title: 'Criar aplicação' }
+            },
+            {
+                path: 'aplicacoes/:id/gerar',
+                name: 'application-generate',
+                component: AplicacaoGerarView,
+                meta: { title: 'Gerar aplicação' }
+            },
+            {
+                path: 'aplicacoes/:id/versoes',
+                name: 'application-versions',
+                component: AplicacaoVersoesView,
+                meta: { title: 'Versões da prova' }
+            },
+            {
+                path: 'aplicacoes/:id',
+                name: 'application-details',
+                component: AplicacaoDetalhesView,
+                meta: { title: 'Detalhes da aplicação' }
             }
         ]
     },
