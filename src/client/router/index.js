@@ -3,6 +3,8 @@ import { createRouter, createWebHistory } from 'vue-router';
 import AppShell from '../components/layout/AppShell.vue';
 import ExamDetailsView from '../views/ExamDetailsView.vue';
 import HomeView from '../views/HomeView.vue';
+import QuestionBank from '../views/QuestionBank.vue';
+import QuestionFormView from '../views/QuestionFormView.vue';
 
 const routes = [
     {
@@ -16,6 +18,24 @@ const routes = [
                 meta: { title: 'Página inicial' }
             },
             {
+                path: 'questoes',
+                name: 'questions',
+                component: QuestionBank,
+                meta: { title: 'Banco de questões' }
+            },
+            {
+                path: 'questoes/nova',
+                name: 'question-new',
+                component: QuestionFormView,
+                meta: { title: 'Nova questão' }
+            },
+            {
+                path: 'questoes/:id/editar',
+                name: 'question-edit',
+                component: QuestionFormView,
+                meta: { title: 'Editar questão' }
+            },
+            {
                 path: 'provas/:id',
                 name: 'exam-details',
                 component: ExamDetailsView,
@@ -24,6 +44,20 @@ const routes = [
         ]
     },
     { path: '/index.html', redirect: '/' },
+    {
+        path: '/pages/questoes.html',
+        redirect: '/questoes'
+    },
+    {
+        path: '/pages/questao-form.html',
+        redirect: (to) => {
+            const questionId = Number(to.query.id);
+            return {
+                path: questionId > 0 ? `/questoes/${questionId}/editar` : '/questoes/nova',
+                query: {}
+            };
+        }
+    },
     {
         path: '/pages/prova-detalhes.html',
         redirect: (to) => `/provas/${Number(to.query.id) || 1}`

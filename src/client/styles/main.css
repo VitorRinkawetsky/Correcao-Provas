@@ -75,6 +75,18 @@ h2 {
     outline-offset: 3px;
 }
 
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
 .skip-link {
     position: fixed;
     z-index: 100;
@@ -800,18 +812,18 @@ h2 {
     }
 }
 
-.question-bank {
+.legacy-question-bank {
     padding: 32px 40px;
 }
 
-.header {
+.legacy-question-bank .header {
     display: flex;
     align-items: flex-end;
     justify-content: space-between;
     margin-bottom: 25px;
 }
 
-.eyebrow {
+.legacy-question-bank .eyebrow {
     margin: 0 0 6px;
     color: #087c78;
     font-size: 12px;
@@ -819,19 +831,19 @@ h2 {
     text-transform: uppercase;
 }
 
-h1 {
+.legacy-question-bank h1 {
     margin: 0;
     color: #183333;
     font-size: 30px;
 }
 
-.header p:last-child {
+.legacy-question-bank .header p:last-child {
     margin: 7px 0 0;
     color: #718080;
     font-size: 14px;
 }
 
-.button {
+.legacy-question-bank .button {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -844,7 +856,7 @@ h1 {
     cursor: pointer;
 }
 
-.search {
+.legacy-question-bank .search {
     display: flex;
     align-items: center;
     gap: 10px;
@@ -858,22 +870,22 @@ h1 {
     color: #7b8888;
 }
 
-.search input {
+.legacy-question-bank .search input {
     width: 100%;
     border: 0;
     outline: 0;
     font-size: 14px;
 }
 
-.card {
+.legacy-question-bank .card {
     overflow: hidden;
     border: 1px solid #e3e9e9;
     border-radius: 9px;
     background: white;
 }
 
-.table-header,
-.question {
+.legacy-question-bank .table-header,
+.legacy-question-bank .question {
     display: grid;
     grid-template-columns: 2.5fr 1fr 1fr .8fr .8fr 45px;
     align-items: center;
@@ -881,7 +893,7 @@ h1 {
     padding: 15px 20px;
 }
 
-.table-header {
+.legacy-question-bank .table-header {
     background: #fafcfc;
     border-bottom: 1px solid #e5ebeb;
     color: #687575;
@@ -890,36 +902,36 @@ h1 {
     text-transform: uppercase;
 }
 
-.question {
+.legacy-question-bank .question {
     min-height: 75px;
     border-bottom: 1px solid #edf1f1;
     color: #596666;
     font-size: 12px;
 }
 
-.question:last-child {
+.legacy-question-bank .question:last-child {
     border-bottom: 0;
 }
 
-.question-title {
+.legacy-question-bank .question-title {
     display: flex;
     align-items: center;
     gap: 12px;
 }
 
-.question-title strong {
+.legacy-question-bank .question-title strong {
     display: block;
     color: #263838;
     font-size: 13px;
 }
 
-.question-title small {
+.legacy-question-bank .question-title small {
     display: block;
     margin-top: 5px;
     color: #8a9696;
 }
 
-.number {
+.legacy-question-bank .number {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -932,7 +944,7 @@ h1 {
     font-weight: 700;
 }
 
-.status {
+.legacy-question-bank .status {
     width: fit-content;
     padding: 5px 8px;
     border-radius: 5px;
@@ -940,22 +952,22 @@ h1 {
     font-weight: 600;
 }
 
-.ativa {
+.legacy-question-bank .ativa {
     background: #eaf7ed;
     color: #31834a;
 }
 
-.rascunho {
+.legacy-question-bank .rascunho {
     background: #fff6dc;
     color: #b17c09;
 }
 
-.arquivada {
+.legacy-question-bank .arquivada {
     background: #f0f2f2;
     color: #697575;
 }
 
-.edit {
+.legacy-question-bank .edit {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -968,36 +980,36 @@ h1 {
     cursor: pointer;
 }
 
-.edit:hover {
+.legacy-question-bank .edit:hover {
     background: #f0f5f5;
     color: #087c78;
 }
 
-.empty {
+.legacy-question-bank .empty {
     padding: 50px;
     text-align: center;
     color: #7c8989;
 }
 
 @media (max-width: 900px) {
-    .question-bank {
+    .legacy-question-bank {
         padding: 25px 20px;
     }
 
-    .table-header {
+    .legacy-question-bank .table-header {
         display: none;
     }
 
-    .question {
+    .legacy-question-bank .question {
         display: flex;
         flex-wrap: wrap;
     }
 
-    .question-title {
+    .legacy-question-bank .question-title {
         width: 100%;
     }
 
-    .header {
+    .legacy-question-bank .header {
         align-items: flex-start;
         flex-direction: column;
         gap: 15px;
