@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { formatScore, getExamDetails } from './mockData';
+import { formatScore, getClassDetails, getClassSummaries, getExamDetails } from './mockData';
 
 describe('dados usados nas telas existentes', () => {
     it('monta os detalhes da primeira prova', () => {
@@ -21,5 +21,32 @@ describe('dados usados nas telas existentes', () => {
 
     it('retorna nulo para uma prova inexistente', () => {
         expect(getExamDetails(999)).toBeNull();
+    });
+
+    it('monta os detalhes da primeira turma', () => {
+        const classItem = getClassDetails(1);
+
+        expect(classItem.name).toBe('Engenharia de Software - 4ª fase');
+        expect(classItem.subject).toBe('Banco de Dados');
+        expect(classItem.term).toBe('2026/2');
+        expect(classItem.inviteCode).toBe('AB82CD');
+        expect(classItem.students.map((student) => student.fullName)).toEqual([
+            'João Silva',
+            'Maria Oliveira',
+            'Pedro Souza'
+        ]);
+    });
+
+    it('lista as turmas disponíveis para navegação', () => {
+        const classSummaries = getClassSummaries();
+
+        expect(classSummaries).toHaveLength(2);
+        expect(classSummaries[0]).toMatchObject({
+            id: 1,
+            name: 'Engenharia de Software - 4ª fase',
+            subject: 'Banco de Dados',
+            term: '2026/2',
+            studentCount: 3
+        });
     });
 });

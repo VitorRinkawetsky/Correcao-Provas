@@ -9,7 +9,7 @@ export const users = [
     {
         id: 2,
         role: 'estudante',
-        fullName: 'João da Silva',
+        fullName: 'João Silva',
         email: 'joao.silva@catolicasc.edu.br',
         registration: '20260001',
         createdAt: '2026-08-01T10:05:00.000Z'
@@ -17,16 +17,16 @@ export const users = [
     {
         id: 3,
         role: 'estudante',
-        fullName: 'Mariana Oliveira',
-        email: 'mariana.oliveira@catolicasc.edu.br',
+        fullName: 'Maria Oliveira',
+        email: 'maria.oliveira@catolicasc.edu.br',
         registration: '20260002',
         createdAt: '2026-08-01T10:10:00.000Z'
     },
     {
         id: 4,
         role: 'estudante',
-        fullName: 'Pedro Santos',
-        email: 'pedro.santos@catolicasc.edu.br',
+        fullName: 'Pedro Souza',
+        email: 'pedro.souza@catolicasc.edu.br',
         registration: '20260003',
         createdAt: '2026-08-01T10:15:00.000Z'
     },
@@ -76,12 +76,12 @@ export const classes = [
     {
         id: 1,
         teacherId: 1,
-        name: 'Engenharia de Software · 4ª fase',
+        name: 'Engenharia de Software - 4ª fase',
         subject: 'Banco de Dados',
         term: '2026/2',
         status: 'active',
-        inviteCode: 'BD2026A',
-        studentIds: [2, 3, 4, 5, 6, 7]
+        inviteCode: 'AB82CD',
+        studentIds: [2, 3, 4]
     },
     {
         id: 2,
@@ -512,6 +512,21 @@ export const getStudentsByClassId = (classId) => {
         ? classItem.studentIds.map(getUserById).filter((user) => user?.role === 'estudante')
         : [];
 };
+
+export const getClassDetails = (classId) => {
+    const classItem = getClassById(classId);
+    if (!classItem) return null;
+
+    return {
+        ...classItem,
+        students: getStudentsByClassId(classItem.id)
+    };
+};
+
+export const getClassSummaries = () => classes.map((classItem) => ({
+    ...classItem,
+    studentCount: getStudentsByClassId(classItem.id).length
+}));
 
 export const getExamQuestions = (examId) => {
     const exam = getExamById(examId);
