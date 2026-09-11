@@ -249,13 +249,17 @@ export const exams = [
     {
         id: 2,
         teacherId: 1,
-        title: 'Projeto e Qualidade de Software',
-        description: 'Avaliação em elaboração sobre práticas de Engenharia de Software.',
+        title: 'P2 - SQL',
+        description: 'Segunda avaliação da disciplina de Banco de Dados, com foco em consultas SQL.',
         questions: [
-            { questionId: 5, order: 1, score: 2 },
-            { questionId: 6, order: 2, score: 2 },
-            { questionId: 7, order: 3, score: 2 },
-            { questionId: 10, order: 4, score: 4 }
+            { questionId: 1, order: 1, score: 1 },
+            { questionId: 2, order: 2, score: 1 },
+            { questionId: 3, order: 3, score: 1 },
+            { questionId: 4, order: 4, score: 1 },
+            { questionId: 5, order: 5, score: 1 },
+            { questionId: 6, order: 6, score: 1 },
+            { questionId: 7, order: 7, score: 1 },
+            { questionId: 8, order: 8, score: 1 }
         ],
         status: 'draft',
         createdAt: '2026-08-12T13:30:00.000Z'
@@ -542,6 +546,8 @@ export const getExamDetails = (examId) => {
         totalScore: examQuestions.reduce((total, question) => total + question.score, 0)
     };
 };
+
+export const getAllExams = () => exams.map((exam) => getExamDetails(exam.id));
 
 export const getApplicationsByExamId = (examId) => applications.filter((item) => item.examId === Number(examId));
 export const getApplicationsByClassId = (classId) => applications.filter((item) => item.classId === Number(classId));

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { formatScore, getExamDetails } from './mockData';
+import { formatScore, getAllExams, getExamDetails } from './mockData';
 
 describe('dados usados nas telas existentes', () => {
     it('monta os detalhes da primeira prova', () => {
@@ -21,5 +21,21 @@ describe('dados usados nas telas existentes', () => {
 
     it('retorna nulo para uma prova inexistente', () => {
         expect(getExamDetails(999)).toBeNull();
+    });
+});
+
+describe('listagem de provas', () => {
+    it('lista todas as provas com contagem de questões e status', () => {
+        const exams = getAllExams();
+
+        expect(exams).toHaveLength(3);
+
+        const p1 = exams.find((exam) => exam.title === 'P1 - Banco de Dados');
+        expect(p1.questionCount).toBe(10);
+        expect(p1.status).toBe('ready');
+
+        const p2 = exams.find((exam) => exam.title === 'P2 - SQL');
+        expect(p2.questionCount).toBe(8);
+        expect(p2.status).toBe('draft');
     });
 });

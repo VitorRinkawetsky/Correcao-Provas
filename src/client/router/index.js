@@ -3,6 +3,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 import AppShell from '../components/layout/AppShell.vue';
 import ExamDetailsView from '../views/ExamDetailsView.vue';
 import HomeView from '../views/HomeView.vue';
+import ProvasListView from '../views/ProvasListView.vue';
 
 const routes = [
     {
@@ -16,6 +17,12 @@ const routes = [
                 meta: { title: 'Página inicial' }
             },
             {
+                path: 'provas',
+                name: 'exam-list',
+                component: ProvasListView,
+                meta: { title: 'Provas' }
+            },
+            {
                 path: 'provas/:id',
                 name: 'exam-details',
                 component: ExamDetailsView,
@@ -27,6 +34,10 @@ const routes = [
     {
         path: '/pages/prova-detalhes.html',
         redirect: (to) => `/provas/${Number(to.query.id) || 1}`
+    },
+    {
+        path: '/pages/provas.html',
+        redirect: '/provas'
     },
     { path: '/:pathMatch(.*)*', redirect: '/' }
 ];
