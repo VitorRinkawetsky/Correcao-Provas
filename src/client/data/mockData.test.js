@@ -7,7 +7,7 @@ describe('dados usados nas telas existentes', () => {
         const exam = getExamDetails(1);
 
         expect(exam.title).toBe('P1 - Banco de Dados');
-        expect(exam.questionCount).toBe(5);
+        expect(exam.questionCount).toBe(10);
         expect(exam.totalScore).toBe(10);
         expect(formatScore(exam.totalScore)).toBe('10.0');
     });
@@ -15,8 +15,8 @@ describe('dados usados nas telas existentes', () => {
     it('mantém a ordem e os valores das questões', () => {
         const exam = getExamDetails(1);
 
-        expect(exam.questions.map((question) => question.order)).toEqual([1, 2, 3, 4, 5]);
-        expect(exam.questions.map((question) => question.score)).toEqual([1.5, 1.5, 1.5, 1.5, 4]);
+        expect(exam.questions.map((question) => question.order)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+        expect(exam.questions.map((question) => question.score)).toEqual([1, 1, 1, 1, 1, 1, 1, 1, 1, 1]);
     });
 
     it('retorna nulo para uma prova inexistente', () => {

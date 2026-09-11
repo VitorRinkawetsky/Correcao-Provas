@@ -232,11 +232,16 @@ export const exams = [
         title: 'P1 - Banco de Dados',
         description: 'Primeira avaliação da disciplina de Banco de Dados.',
         questions: [
-            { questionId: 1, order: 1, score: 1.5 },
-            { questionId: 2, order: 2, score: 1.5 },
-            { questionId: 3, order: 3, score: 1.5 },
-            { questionId: 4, order: 4, score: 1.5 },
-            { questionId: 9, order: 5, score: 4 }
+            { questionId: 1, order: 1, score: 1 },
+            { questionId: 2, order: 2, score: 1 },
+            { questionId: 3, order: 3, score: 1 },
+            { questionId: 4, order: 4, score: 1 },
+            { questionId: 5, order: 5, score: 1 },
+            { questionId: 6, order: 6, score: 1 },
+            { questionId: 7, order: 7, score: 1 },
+            { questionId: 8, order: 8, score: 1 },
+            { questionId: 9, order: 9, score: 1 },
+            { questionId: 10, order: 10, score: 1 }
         ],
         status: 'ready',
         createdAt: '2026-08-10T10:00:00.000Z'
