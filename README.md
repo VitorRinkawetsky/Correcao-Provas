@@ -1,6 +1,6 @@
 # SGP Católica
 
-Front-end do Sistema de Gestão de Provas, migrado do HTML/JavaScript original para Vue 3. O projeto mantém somente as duas telas que já existiam no repositório e aplica a elas uma identidade visual responsiva.
+Front-end do Sistema de Gestão de Provas, migrado do HTML/JavaScript original para Vue 3. O projeto reúne as telas iniciais de provas e o gerenciamento de questões objetivas em uma identidade visual responsiva.
 
 ## Escopo de telas
 
@@ -8,8 +8,11 @@ Front-end do Sistema de Gestão de Provas, migrado do HTML/JavaScript original p
 | --- | --- | --- |
 | `/` | `public/index.html` | Página inicial |
 | `/provas/:id` | `public/pages/prova-detalhes.html?id=...` | Informações, ações e questões da prova |
+| `/questoes` | `public/pages/questoes.html` | Pesquisa, filtro, edição e exclusão de questões objetivas |
+| `/questoes/nova` | `public/pages/questao-form.html` | Criação de questão objetiva |
+| `/questoes/:id/editar` | `public/pages/questao-form.html?id=...` | Edição de questão objetiva |
 
-As URLs legadas `/index.html` e `/pages/prova-detalhes.html?id=...` continuam funcionando por redirecionamento.
+As URLs legadas `/index.html`, `/pages/prova-detalhes.html?id=...`, `/pages/questoes.html` e `/pages/questao-form.html?id=...` continuam funcionando por redirecionamento.
 
 > Regra de escopo: não crie login, cadastro, listagens, relatórios, perfis ou outras telas sem uma solicitação explícita. Links que existiam na navegação antiga não contam como telas implementadas. Documentos de requisitos são referência de domínio, não autorização para ampliar o front-end.
 
@@ -50,14 +53,18 @@ src/client/
 │   └── ui/StatusBadge.vue
 ├── data/
 │   ├── mockData.js
-│   └── mockData.test.js
+│   ├── mockData.test.js
+│   ├── questionStore.js
+│   └── questionStore.test.js
 ├── router/index.js
 ├── styles/
 │   ├── main.css
 │   └── tokens.css
 ├── views/
 │   ├── HomeView.vue
-│   └── ExamDetailsView.vue
+│   ├── ExamDetailsView.vue
+│   ├── QuestionBank.vue
+│   └── QuestionFormView.vue
 ├── App.vue
 └── main.js
 ```
@@ -104,11 +111,11 @@ Use sempre `src/client/styles/tokens.css` como fonte de verdade. Antes de escrev
 
 ### Componentes e navegação
 
-- Reuse `AppShell` nas duas telas e `StatusBadge` para estados da prova.
+- Reuse `AppShell` nas telas e `StatusBadge` para estados da prova.
 - Use ícones de `@lucide/vue`, normalmente entre 16 e 24 px; não desenhe SVG manual nas views.
 - Botão primário: verde sólido e texto branco. Botão secundário: superfície branca com borda leve.
 - Cards devem ter título curto, conteúdo objetivo e uma única finalidade.
-- A navegação deve expor apenas Home e Detalhes da prova enquanto essas forem as únicas telas existentes.
+- A navegação principal expõe Home, Detalhes da prova e Banco de questões.
 - Não transforme os botões Editar, Criar aplicação e Arquivar em novas rotas até que as respectivas telas sejam solicitadas.
 
 ### Responsividade e acessibilidade
