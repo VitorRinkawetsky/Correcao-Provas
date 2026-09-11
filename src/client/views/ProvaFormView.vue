@@ -1,6 +1,6 @@
 <script setup>
-import { ArrowLeft, GripVertical, Plus, Save, Trash2 } from '@lucide/vue';
-import { computed, ref } from 'vue';
+import { ArrowLeft, GripVertical, Plus, Save, Search, Trash2, X } from '@lucide/vue';
+import { computed, reactive, ref } from 'vue';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
 
 import {
@@ -28,9 +28,12 @@ const formQuestions = ref(
         : []
 );
 
-const selectedQuestionId = ref('');
 const titleError = ref(false);
 const dragIndex = ref(null);
+
+const pickerOpen = ref(false);
+const searchTerm = ref('');
+const selectedIds = reactive(new Set());
 
 const questionById = (questionId) => questions.find((question) => question.id === questionId);
 
@@ -39,16 +42,38 @@ const availableQuestions = computed(() => {
     return questions.filter((question) => !usedIds.has(question.id));
 });
 
+const filteredAvailableQuestions = computed(() => {
+    const term = searchTerm.value.trim().toLowerCase();
+    if (!term) return availableQuestions.value;
+    return availableQuestions.value.filter((question) => questionOptionLabel(question).toLowerCase().includes(term));
+});
+
 const totalScore = computed(() => formQuestions.value.reduce((total, item) => total + (Number(item.score) || 0), 0));
 
 const questionOptionLabel = (question) => `${getQuestionShortLabel(question)} — ${question.statement}`;
 
-const addQuestion = () => {
-    if (!selectedQuestionId.value) return;
-    const question = questionById(Number(selectedQuestionId.value));
-    if (!question) return;
-    formQuestions.value.push({ questionId: question.id, score: question.maxScore || 1 });
-    selectedQuestionId.value = '';
+const togglePicker = () => {
+    pickerOpen.value = !pickerOpen.value;
+    searchTerm.value = '';
+    selectedIds.clear();
+};
+
+const toggleSelected = (questionId) => {
+    if (selectedIds.has(questionId)) {
+        selectedIds.delete(questionId);
+    } else {
+        selectedIds.add(questionId);
+    }
+};
+
+const addSelectedQuestions = () => {
+    selectedIds.forEach((questionId) => {
+        const question = questionById(questionId);
+        if (question) formQuestions.value.push({ questionId: question.id, score: question.maxScore || 1 });
+    });
+    pickerOpen.value = false;
+    searchTerm.value = '';
+    selectedIds.clear();
 };
 
 const removeQuestion = (index) => {
@@ -173,16 +198,50 @@ const cancelHref = computed(() => (isEditMode.value ? `/provas/${examId.value}` 
                     </li>
                 </ul>
 
-                <div class="question-picker">
-                    <select v-model="selectedQuestionId" class="form-input" aria-label="Selecionar questão para adicionar">
-                        <option value="">Selecione uma questão…</option>
-                        <option v-for="question in availableQuestions" :key="question.id" :value="question.id">
-                            {{ questionOptionLabel(question) }}
-                        </option>
-                    </select>
-                    <button class="button button--secondary" type="button" :disabled="!selectedQuestionId" @click="addQuestion">
+                <button class="button button--secondary" type="button" @click="togglePicker">
+                    <X v-if="pickerOpen" :size="17" />
+                    <Plus v-else :size="17" />
+                    {{ pickerOpen ? 'Fechar' : 'Adicionar questão' }}
+                </button>
+
+                <div v-if="pickerOpen" class="question-picker-panel">
+                    <p class="form-label">Adicionar questões</p>
+
+                    <div class="question-picker-search">
+                        <Search :size="17" aria-hidden="true" />
+                        <input
+                            v-model="searchTerm"
+                            type="search"
+                            class="form-input"
+                            placeholder="Pesquisar"
+                            aria-label="Pesquisar questões"
+                        />
+                    </div>
+
+                    <ul class="question-picker-list">
+                        <li v-for="question in filteredAvailableQuestions" :key="question.id">
+                            <label class="question-picker-option">
+                                <input
+                                    type="checkbox"
+                                    :checked="selectedIds.has(question.id)"
+                                    @change="toggleSelected(question.id)"
+                                />
+                                <span>{{ questionOptionLabel(question) }}</span>
+                            </label>
+                        </li>
+                        <li v-if="filteredAvailableQuestions.length === 0" class="question-picker-empty">
+                            Nenhuma questão encontrada.
+                        </li>
+                    </ul>
+
+                    <button
+                        class="button button--primary"
+                        type="button"
+                        :disabled="selectedIds.size === 0"
+                        @click="addSelectedQuestions"
+                    >
                         <Plus :size="17" />
-                        Adicionar questão
+                        Adicionar {{ selectedIds.size }} {{ selectedIds.size === 1 ? 'questão' : 'questões' }}
                     </button>
                 </div>
             </div>
