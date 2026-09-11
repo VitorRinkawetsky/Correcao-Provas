@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router';
+import { createRouter, createWebHashHistory } from 'vue-router';
 
 import AppShell from '../components/layout/AppShell.vue';
 import ClassDetailsView from '../views/ClassDetailsView.vue';
@@ -104,7 +104,7 @@ const routes = [
 ];
 
 const router = createRouter({
-    history: createWebHistory(),
+    history: createWebHashHistory(import.meta.env.BASE_URL),
     routes,
     scrollBehavior: () => ({ top: 0 })
 });
