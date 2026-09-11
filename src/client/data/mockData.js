@@ -1,3 +1,5 @@
+import { reactive } from 'vue';
+
 export const users = [
     {
         id: 1,
@@ -225,7 +227,7 @@ export const questions = [
     }
 ];
 
-export const exams = [
+export const exams = reactive([
     {
         id: 1,
         teacherId: 1,
@@ -278,7 +280,7 @@ export const exams = [
         status: 'closed',
         createdAt: '2026-07-20T14:00:00.000Z'
     }
-];
+]);
 
 export const applications = [
     {
@@ -548,6 +550,32 @@ export const getExamDetails = (examId) => {
 };
 
 export const getAllExams = () => exams.map((exam) => getExamDetails(exam.id));
+
+export const getQuestionShortLabel = (question) => question?.tags?.[question.tags.length - 1] || question?.tags?.[0] || 'Questão';
+
+export const createExam = ({ title, description, questions }) => {
+    const id = exams.reduce((maxId, exam) => Math.max(maxId, exam.id), 0) + 1;
+    const exam = {
+        id,
+        teacherId: 1,
+        title,
+        description,
+        questions,
+        status: 'draft',
+        createdAt: new Date().toISOString()
+    };
+    exams.push(exam);
+    return exam;
+};
+
+export const updateExam = (examId, { title, description, questions }) => {
+    const exam = getExamById(examId);
+    if (!exam) return null;
+    exam.title = title;
+    exam.description = description;
+    exam.questions = questions;
+    return exam;
+};
 
 export const getApplicationsByExamId = (examId) => applications.filter((item) => item.examId === Number(examId));
 export const getApplicationsByClassId = (classId) => applications.filter((item) => item.classId === Number(classId));

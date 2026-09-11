@@ -28,10 +28,10 @@ const exam = computed(() => getExamDetails(route.params.id));
             </div>
 
             <div class="exam-actions" aria-label="Ações da prova">
-                <button class="button button--secondary" type="button">
+                <RouterLink :to="`/provas/${exam.id}/editar`" class="button button--secondary">
                     <Edit3 :size="17" />
                     Editar
-                </button>
+                </RouterLink>
                 <button class="button button--primary" type="button">
                     <FilePlus2 :size="17" />
                     Criar aplicação
