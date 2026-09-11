@@ -11,7 +11,7 @@ export const users = [
     {
         id: 2,
         role: 'estudante',
-        fullName: 'João da Silva',
+        fullName: 'João Silva',
         email: 'joao.silva@catolicasc.edu.br',
         registration: '20260001',
         createdAt: '2026-08-01T10:05:00.000Z'
@@ -19,16 +19,16 @@ export const users = [
     {
         id: 3,
         role: 'estudante',
-        fullName: 'Mariana Oliveira',
-        email: 'mariana.oliveira@catolicasc.edu.br',
+        fullName: 'Maria Oliveira',
+        email: 'maria.oliveira@catolicasc.edu.br',
         registration: '20260002',
         createdAt: '2026-08-01T10:10:00.000Z'
     },
     {
         id: 4,
         role: 'estudante',
-        fullName: 'Pedro Santos',
-        email: 'pedro.santos@catolicasc.edu.br',
+        fullName: 'Pedro Souza',
+        email: 'pedro.souza@catolicasc.edu.br',
         registration: '20260003',
         createdAt: '2026-08-01T10:15:00.000Z'
     },
@@ -78,12 +78,12 @@ export const classes = [
     {
         id: 1,
         teacherId: 1,
-        name: 'Engenharia de Software · 4ª fase',
+        name: 'Engenharia de Software - 4ª fase',
         subject: 'Banco de Dados',
         term: '2026/2',
         status: 'active',
-        inviteCode: 'BD2026A',
-        studentIds: [2, 3, 4, 5, 6, 7]
+        inviteCode: 'AB82CD',
+        studentIds: [2, 3, 4]
     },
     {
         id: 2,
@@ -208,22 +208,6 @@ export const questions = [
             { id: 31, text: 'CONNECT' }
         ],
         correctAlternativeId: 30
-    },
-    {
-        id: 9,
-        teacherId: 1,
-        type: 'discursiva',
-        statement: 'Explique como a normalização reduz redundâncias e anomalias de atualização em um banco de dados relacional.',
-        tags: ['Banco de Dados', 'Normalização'],
-        maxScore: 4
-    },
-    {
-        id: 10,
-        teacherId: 1,
-        type: 'discursiva',
-        statement: 'Descreva como testes automatizados apoiam a evolução segura de um sistema de software.',
-        tags: ['Engenharia de Software', 'Testes'],
-        maxScore: 3
     }
 ];
 
@@ -234,16 +218,14 @@ export const exams = reactive([
         title: 'P1 - Banco de Dados',
         description: 'Primeira avaliação da disciplina de Banco de Dados.',
         questions: [
-            { questionId: 1, order: 1, score: 1 },
-            { questionId: 2, order: 2, score: 1 },
-            { questionId: 3, order: 3, score: 1 },
-            { questionId: 4, order: 4, score: 1 },
-            { questionId: 5, order: 5, score: 1 },
-            { questionId: 6, order: 6, score: 1 },
-            { questionId: 7, order: 7, score: 1 },
-            { questionId: 8, order: 8, score: 1 },
-            { questionId: 9, order: 9, score: 1 },
-            { questionId: 10, order: 10, score: 1 }
+            { questionId: 1, order: 1, score: 1.25 },
+            { questionId: 2, order: 2, score: 1.25 },
+            { questionId: 3, order: 3, score: 1.25 },
+            { questionId: 4, order: 4, score: 1.25 },
+            { questionId: 5, order: 5, score: 1.25 },
+            { questionId: 6, order: 6, score: 1.25 },
+            { questionId: 7, order: 7, score: 1.25 },
+            { questionId: 8, order: 8, score: 1.25 }
         ],
         status: 'ready',
         createdAt: '2026-08-10T10:00:00.000Z'
@@ -275,7 +257,7 @@ export const exams = reactive([
             { questionId: 4, order: 1, score: 2 },
             { questionId: 7, order: 2, score: 2 },
             { questionId: 8, order: 3, score: 2 },
-            { questionId: 10, order: 4, score: 4 }
+            { questionId: 6, order: 4, score: 4 }
         ],
         status: 'closed',
         createdAt: '2026-07-20T14:00:00.000Z'
@@ -321,10 +303,11 @@ export const examVersions = [
         shuffleAlternatives: true,
         withStudentIdentification: true,
         layout: {
-            questionOrder: [3, 1, 9, 4, 2],
+            questionOrder: [3, 1, 5, 4, 2],
             alternativeOrder: [
                 { questionId: 3, printedOrder: [11, 9, 12, 10] },
                 { questionId: 1, printedOrder: [4, 2, 1, 3] },
+                { questionId: 5, printedOrder: [19, 17, 20, 18] },
                 { questionId: 4, printedOrder: [14, 13, 15, 16] },
                 { questionId: 2, printedOrder: [7, 8, 5, 6] }
             ]
@@ -343,11 +326,12 @@ export const examVersions = [
         shuffleAlternatives: false,
         withStudentIdentification: true,
         layout: {
-            questionOrder: [2, 4, 1, 9, 3],
+            questionOrder: [2, 4, 1, 5, 3],
             alternativeOrder: [
                 { questionId: 2, printedOrder: [5, 6, 7, 8] },
                 { questionId: 4, printedOrder: [13, 14, 15, 16] },
                 { questionId: 1, printedOrder: [1, 2, 3, 4] },
+                { questionId: 5, printedOrder: [17, 18, 19, 20] },
                 { questionId: 3, printedOrder: [9, 10, 11, 12] }
             ]
         },
@@ -365,12 +349,13 @@ export const examVersions = [
         shuffleAlternatives: true,
         withStudentIdentification: true,
         layout: {
-            questionOrder: [1, 2, 3, 4, 9],
+            questionOrder: [1, 2, 3, 4, 5],
             alternativeOrder: [
                 { questionId: 1, printedOrder: [3, 4, 2, 1] },
                 { questionId: 2, printedOrder: [6, 5, 8, 7] },
                 { questionId: 3, printedOrder: [12, 11, 10, 9] },
-                { questionId: 4, printedOrder: [16, 15, 13, 14] }
+                { questionId: 4, printedOrder: [16, 15, 13, 14] },
+                { questionId: 5, printedOrder: [20, 19, 18, 17] }
             ]
         },
         answerKeyPublished: true,
@@ -387,11 +372,12 @@ export const examVersions = [
         shuffleAlternatives: false,
         withStudentIdentification: false,
         layout: {
-            questionOrder: [4, 7, 8, 10],
+            questionOrder: [4, 7, 8, 6],
             alternativeOrder: [
                 { questionId: 4, printedOrder: [13, 14, 15, 16] },
                 { questionId: 7, printedOrder: [25, 26, 27] },
-                { questionId: 8, printedOrder: [28, 29, 30, 31] }
+                { questionId: 8, printedOrder: [28, 29, 30, 31] },
+                { questionId: 6, printedOrder: [21, 22, 23, 24] }
             ]
         },
         answerKeyPublished: true,
@@ -420,10 +406,10 @@ export const corrections = [
             { questionId: 1, selectedAlternativeId: 2, correct: true, score: 1.5 },
             { questionId: 2, selectedAlternativeId: 5, correct: true, score: 1.5 },
             { questionId: 3, selectedAlternativeId: 9, correct: false, score: 0 },
-            { questionId: 4, selectedAlternativeId: 15, correct: true, score: 1.5 }
+            { questionId: 4, selectedAlternativeId: 15, correct: true, score: 1.5 },
+            { questionId: 5, selectedAlternativeId: 18, correct: true, score: 4 }
         ],
-        discursiveScores: [{ questionId: 9, score: 3.5 }],
-        totalScore: 8,
+        totalScore: 8.5,
         notes: 'Boa compreensão geral. Recomenda-se revisar a Segunda Forma Normal.',
         confirmedAt: '2026-08-16T14:30:00.000Z',
         correctedBy: 1,
@@ -438,10 +424,10 @@ export const corrections = [
             { questionId: 1, selectedAlternativeId: 2, correct: true, score: 1.5 },
             { questionId: 2, selectedAlternativeId: 5, correct: true, score: 1.5 },
             { questionId: 3, selectedAlternativeId: 9, correct: false, score: 0 },
-            { questionId: 4, selectedAlternativeId: 15, correct: true, score: 1.5 }
+            { questionId: 4, selectedAlternativeId: 15, correct: true, score: 1.5 },
+            { questionId: 5, selectedAlternativeId: 18, correct: true, score: 4 }
         ],
-        discursiveScores: [{ questionId: 9, score: 3.8 }],
-        totalScore: 8.3,
+        totalScore: 8.5,
         notes: null,
         confirmedAt: '2026-08-16T15:10:00.000Z',
         correctedBy: 1,
@@ -456,11 +442,11 @@ export const corrections = [
             { questionId: 1, selectedAlternativeId: 1, correct: false, score: 0 },
             { questionId: 2, selectedAlternativeId: 5, correct: true, score: 1.5 },
             { questionId: 3, selectedAlternativeId: 12, correct: true, score: 1.5 },
-            { questionId: 4, selectedAlternativeId: 15, correct: true, score: 1.5 }
+            { questionId: 4, selectedAlternativeId: 15, correct: true, score: 1.5 },
+            { questionId: 5, selectedAlternativeId: 17, correct: false, score: 0 }
         ],
-        discursiveScores: [{ questionId: 9, score: 2 }],
-        totalScore: 6.5,
-        notes: 'A resposta discursiva precisa relacionar melhor redundância e anomalias de atualização.',
+        totalScore: 4.5,
+        notes: 'Recomenda-se revisar normalização e conceitos de modelagem.',
         confirmedAt: '2026-08-16T15:45:00.000Z',
         correctedBy: 1,
         isAutomaticallyAssigned: true,
@@ -475,10 +461,10 @@ export const corrections = [
         objectiveResults: [
             { questionId: 4, selectedAlternativeId: 15, correct: true, score: 2 },
             { questionId: 7, selectedAlternativeId: 27, correct: true, score: 2 },
-            { questionId: 8, selectedAlternativeId: 28, correct: false, score: 0 }
+            { questionId: 8, selectedAlternativeId: 28, correct: false, score: 0 },
+            { questionId: 6, selectedAlternativeId: 21, correct: true, score: 4 }
         ],
-        discursiveScores: [{ questionId: 10, score: 2.5 }],
-        totalScore: 6.5,
+        totalScore: 8,
         notes: 'Aguardando associação manual com um estudante da turma.',
         confirmedAt: '2026-07-27T16:20:00.000Z',
         correctedBy: 1,
@@ -523,6 +509,21 @@ export const getStudentsByClassId = (classId) => {
         ? classItem.studentIds.map(getUserById).filter((user) => user?.role === 'estudante')
         : [];
 };
+
+export const getClassDetails = (classId) => {
+    const classItem = getClassById(classId);
+    if (!classItem) return null;
+
+    return {
+        ...classItem,
+        students: getStudentsByClassId(classItem.id)
+    };
+};
+
+export const getClassSummaries = () => classes.map((classItem) => ({
+    ...classItem,
+    studentCount: getStudentsByClassId(classItem.id).length
+}));
 
 export const getExamQuestions = (examId) => {
     const exam = getExamById(examId);

@@ -1,5 +1,5 @@
 <script setup>
-import { GraduationCap, Home, ListChecks } from '@lucide/vue';
+import { BookOpenCheck, GraduationCap, Home, ListChecks, Users } from '@lucide/vue';
 import { RouterLink, RouterView } from 'vue-router';
 </script>
 
@@ -27,6 +27,14 @@ import { RouterLink, RouterView } from 'vue-router';
                     <RouterLink to="/provas" class="main-navigation__link">
                         <ListChecks :size="18" :stroke-width="1.8" />
                         <span>Provas</span>
+                    </RouterLink>
+                    <RouterLink to="/pages/turmas.html" class="main-navigation__link">
+                        <Users :size="18" :stroke-width="1.8" />
+                        <span>Turmas</span>
+                    </RouterLink>
+                    <RouterLink to="/questoes" class="main-navigation__link">
+                        <BookOpenCheck :size="18" :stroke-width="1.8" />
+                        <span>Banco de questões</span>
                     </RouterLink>
                 </nav>
             </div>
