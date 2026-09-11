@@ -1,6 +1,9 @@
 import { createRouter, createWebHistory } from 'vue-router';
 
 import AppShell from '../components/layout/AppShell.vue';
+import ClassDetailsView from '../views/ClassDetailsView.vue';
+import ClassFormView from '../views/ClassFormView.vue';
+import ClassListView from '../views/ClassListView.vue';
 import ExamDetailsView from '../views/ExamDetailsView.vue';
 import HomeView from '../views/HomeView.vue';
 import AplicacoesView from '../views/AplicacoesView.vue';
