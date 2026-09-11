@@ -8,6 +8,11 @@ import ExamDetailsView from '../views/ExamDetailsView.vue';
 import HomeView from '../views/HomeView.vue';
 import QuestionBank from '../views/QuestionBank.vue';
 import QuestionFormView from '../views/QuestionFormView.vue';
+import AplicacoesView from '../views/AplicacoesView.vue';
+import AplicacaoFormView from '../views/AplicacaoFormView.vue';
+import AplicacaoDetalhesView from '../views/AplicacaoDetalhesView.vue';
+import AplicacaoGerarView from '../views/AplicacaoGerarView.vue';
+import AplicacaoVersoesView from '../views/AplicacaoVersoesView.vue';
 
 const routes = [
     {
@@ -45,22 +50,34 @@ const routes = [
                 meta: { title: 'Detalhes da prova' }
             },
             {
-                path: 'pages/turma-detalhes.html',
-                name: 'class-details',
-                component: ClassDetailsView,
-                meta: { title: 'Detalhes da turma' }
+                path: 'aplicacoes',
+                name: 'applications',
+                component: AplicacoesView,
+                meta: { title: 'Aplicações' }
             },
             {
-                path: 'pages/turmas.html',
-                name: 'class-list',
-                component: ClassListView,
-                meta: { title: 'Turmas' }
+                path: 'aplicacoes/nova',
+                name: 'application-create',
+                component: AplicacaoFormView,
+                meta: { title: 'Criar aplicação' }
             },
             {
-                path: 'pages/turma-form.html',
-                name: 'class-form',
-                component: ClassFormView,
-                meta: { title: 'Turma' }
+                path: 'aplicacoes/:id/gerar',
+                name: 'application-generate',
+                component: AplicacaoGerarView,
+                meta: { title: 'Gerar aplicação' }
+            },
+            {
+                path: 'aplicacoes/:id/versoes',
+                name: 'application-versions',
+                component: AplicacaoVersoesView,
+                meta: { title: 'Versões da prova' }
+            },
+            {
+                path: 'aplicacoes/:id',
+                name: 'application-details',
+                component: AplicacaoDetalhesView,
+                meta: { title: 'Detalhes da aplicação' }
             }
         ]
     },
