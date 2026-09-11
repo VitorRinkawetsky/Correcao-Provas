@@ -1,6 +1,9 @@
 import { createRouter, createWebHistory } from 'vue-router';
 
 import AppShell from '../components/layout/AppShell.vue';
+import ClassDetailsView from '../views/ClassDetailsView.vue';
+import ClassFormView from '../views/ClassFormView.vue';
+import ClassListView from '../views/ClassListView.vue';
 import ExamDetailsView from '../views/ExamDetailsView.vue';
 import HomeView from '../views/HomeView.vue';
 import QuestionBank from '../views/QuestionBank.vue';
@@ -40,6 +43,24 @@ const routes = [
                 name: 'exam-details',
                 component: ExamDetailsView,
                 meta: { title: 'Detalhes da prova' }
+            },
+            {
+                path: 'pages/turma-detalhes.html',
+                name: 'class-details',
+                component: ClassDetailsView,
+                meta: { title: 'Detalhes da turma' }
+            },
+            {
+                path: 'pages/turmas.html',
+                name: 'class-list',
+                component: ClassListView,
+                meta: { title: 'Turmas' }
+            },
+            {
+                path: 'pages/turma-form.html',
+                name: 'class-form',
+                component: ClassFormView,
+                meta: { title: 'Turma' }
             }
         ]
     },
