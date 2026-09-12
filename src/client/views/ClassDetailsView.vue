@@ -6,7 +6,7 @@ import { useRoute } from 'vue-router';
 import { getClassDetails } from '../data/mockData';
 
 const route = useRoute();
-const classId = computed(() => Number(route.query.id) || 1);
+const classId = computed(() => Number(route.params.id || route.query.id) || 1);
 const classItem = computed(() => getClassDetails(classId.value));
 const inviteCode = ref(classItem.value?.inviteCode || 'AB82CD');
 const isModalOpen = ref(false);

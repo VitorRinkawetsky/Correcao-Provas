@@ -28,7 +28,7 @@ import { RouterLink, RouterView } from 'vue-router';
                         <ListChecks :size="18" :stroke-width="1.8" />
                         <span>Provas</span>
                     </RouterLink>
-                    <RouterLink to="/pages/turmas.html" class="main-navigation__link">
+                    <RouterLink to="/turmas" class="main-navigation__link">
                         <Users :size="18" :stroke-width="1.8" />
                         <span>Turmas</span>
                     </RouterLink>

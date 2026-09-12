@@ -70,6 +70,30 @@ const routes = [
                 meta: { title: 'Editar prova' }
             },
             {
+                path: 'turmas',
+                name: 'class-list',
+                component: ClassListView,
+                meta: { title: 'Turmas' }
+            },
+            {
+                path: 'turmas/nova',
+                name: 'class-new',
+                component: ClassFormView,
+                meta: { title: 'Nova turma' }
+            },
+            {
+                path: 'turmas/:id/editar',
+                name: 'class-edit',
+                component: ClassFormView,
+                meta: { title: 'Editar turma' }
+            },
+            {
+                path: 'turmas/:id',
+                name: 'class-details',
+                component: ClassDetailsView,
+                meta: { title: 'Detalhes da turma' }
+            },
+            {
                 path: 'aplicacoes',
                 name: 'applications',
                 component: AplicacoesView,
@@ -98,24 +122,6 @@ const routes = [
                 name: 'application-details',
                 component: AplicacaoDetalhesView,
                 meta: { title: 'Detalhes da aplicação' }
-            },
-            {
-                path: 'pages/turma-detalhes.html',
-                name: 'class-details',
-                component: ClassDetailsView,
-                meta: { title: 'Detalhes da turma' }
-            },
-            {
-                path: 'pages/turmas.html',
-                name: 'class-list',
-                component: ClassListView,
-                meta: { title: 'Turmas' }
-            },
-            {
-                path: 'pages/turma-form.html',
-                name: 'class-form',
-                component: ClassFormView,
-                meta: { title: 'Turma' }
             }
         ]
     },
@@ -145,6 +151,21 @@ const routes = [
     {
         path: '/pages/prova-form.html',
         redirect: (to) => (to.query.id ? `/provas/${Number(to.query.id)}/editar` : '/provas/novo')
+    },
+    {
+        path: '/pages/turmas.html',
+        redirect: '/turmas'
+    },
+    {
+        path: '/pages/turma-form.html',
+        redirect: (to) => {
+            const classId = Number(to.query.id);
+            return classId > 0 ? `/turmas/${classId}/editar` : '/turmas/nova';
+        }
+    },
+    {
+        path: '/pages/turma-detalhes.html',
+        redirect: (to) => `/turmas/${Number(to.query.id) || 1}`
     },
     { path: '/:pathMatch(.*)*', redirect: '/' }
 ];

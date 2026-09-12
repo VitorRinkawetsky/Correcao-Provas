@@ -20,7 +20,7 @@ const classSummaries = getClassSummaries();
                     <p class="eyebrow">Listagem</p>
                     <h2 id="turmas-disponiveis">Turmas disponíveis</h2>
                 </div>
-                <RouterLink to="/pages/turma-form.html" class="button button--primary">
+                <RouterLink to="/turmas/nova" class="button button--primary">
                     <Plus :size="17" />
                     Nova turma
                 </RouterLink>
@@ -30,7 +30,7 @@ const classSummaries = getClassSummaries();
                 <RouterLink
                     v-for="classItem in classSummaries"
                     :key="classItem.id"
-                    :to="`/pages/turma-detalhes.html?id=${classItem.id}`"
+                    :to="`/turmas/${classItem.id}`"
                     class="class-list-card"
                 >
                     <span class="class-list-card__icon" aria-hidden="true">
