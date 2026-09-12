@@ -10,6 +10,8 @@ const featuredExam = getExamDetails(1);
 
 <template>
     <section class="home-page">
+
+
         <div class="home-hero">
             <div class="home-hero__content">
                 <p class="eyebrow">Sistema de Gestão de Provas</p>
@@ -32,6 +34,85 @@ const featuredExam = getExamDetails(1);
                 <span class="home-hero__check"><CheckCircle2 :size="25" /></span>
             </div>
         </div>
+
+                <section class="featured-section" aria-labelledby="aplicacoes-provas">
+    <div class="section-heading">
+        <div>
+            <p class="eyebrow">Gestão de aplicações</p>
+            <h2 id="aplicacoes-provas">Telas de aplicações</h2>
+        </div>
+        <span class="section-heading__icon" aria-hidden="true">
+            <Layers3 :size="21" :stroke-width="1.8" />
+        </span>
+    </div>
+
+    <div class="applications-links">
+        <RouterLink to="/aplicacoes" class="exam-preview-card">
+            <span class="exam-preview-card__icon" aria-hidden="true">
+                <FileText :size="24" :stroke-width="1.7" />
+            </span>
+            <span class="exam-preview-card__content">
+                <span class="exam-preview-card__topline">
+                    <strong>Aplicações</strong>
+                </span>
+                <span>Veja todas as aplicações de prova geradas.</span>
+            </span>
+            <ArrowRight class="exam-preview-card__arrow" :size="20" aria-hidden="true" />
+        </RouterLink>
+
+        <RouterLink to="/aplicacoes/nova" class="exam-preview-card">
+            <span class="exam-preview-card__icon" aria-hidden="true">
+                <FileText :size="24" :stroke-width="1.7" />
+            </span>
+            <span class="exam-preview-card__content">
+                <span class="exam-preview-card__topline">
+                    <strong>Criar aplicação</strong>
+                </span>
+                <span>Selecione uma prova e uma turma para criar uma nova aplicação.</span>
+            </span>
+            <ArrowRight class="exam-preview-card__arrow" :size="20" aria-hidden="true" />
+        </RouterLink>
+
+        <RouterLink to="/aplicacoes/1" class="exam-preview-card">
+            <span class="exam-preview-card__icon" aria-hidden="true">
+                <FileText :size="24" :stroke-width="1.7" />
+            </span>
+            <span class="exam-preview-card__content">
+                <span class="exam-preview-card__topline">
+                    <strong>Detalhes da aplicação</strong>
+                </span>
+                <span>Acompanhe turma, status e correções de uma aplicação.</span>
+            </span>
+            <ArrowRight class="exam-preview-card__arrow" :size="20" aria-hidden="true" />
+        </RouterLink>
+
+        <RouterLink to="/aplicacoes/1/gerar" class="exam-preview-card">
+            <span class="exam-preview-card__icon" aria-hidden="true">
+                <FileText :size="24" :stroke-width="1.7" />
+            </span>
+            <span class="exam-preview-card__content">
+                <span class="exam-preview-card__topline">
+                    <strong>Gerar aplicação</strong>
+                </span>
+                <span>Configure versões, embaralhamento e identificação da prova.</span>
+            </span>
+            <ArrowRight class="exam-preview-card__arrow" :size="20" aria-hidden="true" />
+        </RouterLink>
+
+        <RouterLink to="/aplicacoes/1/versoes" class="exam-preview-card">
+            <span class="exam-preview-card__icon" aria-hidden="true">
+                <FileText :size="24" :stroke-width="1.7" />
+            </span>
+            <span class="exam-preview-card__content">
+                <span class="exam-preview-card__topline">
+                    <strong>Versões geradas</strong>
+                </span>
+                <span>Baixe ou regenere o PDF das versões da prova.</span>
+            </span>
+            <ArrowRight class="exam-preview-card__arrow" :size="20" aria-hidden="true" />
+        </RouterLink>
+    </div>
+</section>
 
         <section v-if="featuredExam" class="featured-section" aria-labelledby="avaliacao-disponivel">
             <div class="section-heading">
