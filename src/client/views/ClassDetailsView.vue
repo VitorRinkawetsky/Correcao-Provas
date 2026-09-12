@@ -112,7 +112,7 @@ const addStudent = () => {
                     </button>
                 </div>
 
-                <label class="form-field">
+                <label class="class-form-field">
                     <span>E-mail do aluno</span>
                     <input v-model="studentEmail" type="email" placeholder="aluno@catolicasc.edu.br" />
                 </label>

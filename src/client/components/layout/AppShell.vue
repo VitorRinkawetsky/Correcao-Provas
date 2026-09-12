@@ -1,5 +1,5 @@
 <script setup>
-import { BookOpenCheck, FileText, GraduationCap, Home, Users } from '@lucide/vue';
+import { BookOpenCheck, GraduationCap, Home, ListChecks, Users } from '@lucide/vue';
 import { RouterLink, RouterView } from 'vue-router';
 </script>
 
@@ -24,9 +24,9 @@ import { RouterLink, RouterView } from 'vue-router';
                         <Home :size="18" :stroke-width="1.8" />
                         <span>Home</span>
                     </RouterLink>
-                    <RouterLink to="/provas/1" class="main-navigation__link">
-                        <FileText :size="18" :stroke-width="1.8" />
-                        <span>Detalhes da prova</span>
+                    <RouterLink to="/provas" class="main-navigation__link">
+                        <ListChecks :size="18" :stroke-width="1.8" />
+                        <span>Provas</span>
                     </RouterLink>
                     <RouterLink to="/pages/turmas.html" class="main-navigation__link">
                         <Users :size="18" :stroke-width="1.8" />

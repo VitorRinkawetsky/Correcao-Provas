@@ -1,3 +1,5 @@
+import { reactive } from 'vue';
+
 export const users = [
     {
         id: 1,
@@ -209,18 +211,21 @@ export const questions = [
     }
 ];
 
-export const exams = [
+export const exams = reactive([
     {
         id: 1,
         teacherId: 1,
         title: 'P1 - Banco de Dados',
         description: 'Primeira avaliação da disciplina de Banco de Dados.',
         questions: [
-            { questionId: 1, order: 1, score: 1.5 },
-            { questionId: 2, order: 2, score: 1.5 },
-            { questionId: 3, order: 3, score: 1.5 },
-            { questionId: 4, order: 4, score: 1.5 },
-            { questionId: 5, order: 5, score: 4 }
+            { questionId: 1, order: 1, score: 1.25 },
+            { questionId: 2, order: 2, score: 1.25 },
+            { questionId: 3, order: 3, score: 1.25 },
+            { questionId: 4, order: 4, score: 1.25 },
+            { questionId: 5, order: 5, score: 1.25 },
+            { questionId: 6, order: 6, score: 1.25 },
+            { questionId: 7, order: 7, score: 1.25 },
+            { questionId: 8, order: 8, score: 1.25 }
         ],
         status: 'ready',
         createdAt: '2026-08-10T10:00:00.000Z'
@@ -228,13 +233,17 @@ export const exams = [
     {
         id: 2,
         teacherId: 1,
-        title: 'Projeto e Qualidade de Software',
-        description: 'Avaliação em elaboração sobre práticas de Engenharia de Software.',
+        title: 'P2 - SQL',
+        description: 'Segunda avaliação da disciplina de Banco de Dados, com foco em consultas SQL.',
         questions: [
-            { questionId: 5, order: 1, score: 2 },
-            { questionId: 6, order: 2, score: 2 },
-            { questionId: 7, order: 3, score: 2 },
-            { questionId: 8, order: 4, score: 4 }
+            { questionId: 1, order: 1, score: 1 },
+            { questionId: 2, order: 2, score: 1 },
+            { questionId: 3, order: 3, score: 1 },
+            { questionId: 4, order: 4, score: 1 },
+            { questionId: 5, order: 5, score: 1 },
+            { questionId: 6, order: 6, score: 1 },
+            { questionId: 7, order: 7, score: 1 },
+            { questionId: 8, order: 8, score: 1 }
         ],
         status: 'draft',
         createdAt: '2026-08-12T13:30:00.000Z'
@@ -253,7 +262,7 @@ export const exams = [
         status: 'closed',
         createdAt: '2026-07-20T14:00:00.000Z'
     }
-];
+]);
 
 export const applications = [
     {
@@ -539,6 +548,34 @@ export const getExamDetails = (examId) => {
         questionCount: examQuestions.length,
         totalScore: examQuestions.reduce((total, question) => total + question.score, 0)
     };
+};
+
+export const getAllExams = () => exams.map((exam) => getExamDetails(exam.id));
+
+export const getQuestionShortLabel = (question) => question?.tags?.[question.tags.length - 1] || question?.tags?.[0] || 'Questão';
+
+export const createExam = ({ title, description, questions }) => {
+    const id = exams.reduce((maxId, exam) => Math.max(maxId, exam.id), 0) + 1;
+    const exam = {
+        id,
+        teacherId: 1,
+        title,
+        description,
+        questions,
+        status: 'draft',
+        createdAt: new Date().toISOString()
+    };
+    exams.push(exam);
+    return exam;
+};
+
+export const updateExam = (examId, { title, description, questions }) => {
+    const exam = getExamById(examId);
+    if (!exam) return null;
+    exam.title = title;
+    exam.description = description;
+    exam.questions = questions;
+    return exam;
 };
 
 export const getApplicationsByExamId = (examId) => applications.filter((item) => item.examId === Number(examId));

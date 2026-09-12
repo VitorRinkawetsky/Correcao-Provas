@@ -23,17 +23,17 @@ const saveClass = () => {
         </header>
 
         <form class="class-form" @submit.prevent="saveClass">
-            <label class="form-field">
+            <label class="class-form-field">
                 <span>Nome</span>
                 <input v-model="form.name" type="text" />
             </label>
 
-            <label class="form-field">
+            <label class="class-form-field">
                 <span>Disciplina</span>
                 <input v-model="form.subject" type="text" />
             </label>
 
-            <label class="form-field">
+            <label class="class-form-field">
                 <span>Período</span>
                 <input v-model="form.term" type="text" />
             </label>

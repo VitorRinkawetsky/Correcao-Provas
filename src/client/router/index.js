@@ -6,6 +6,8 @@ import ClassFormView from '../views/ClassFormView.vue';
 import ClassListView from '../views/ClassListView.vue';
 import ExamDetailsView from '../views/ExamDetailsView.vue';
 import HomeView from '../views/HomeView.vue';
+import ProvaFormView from '../views/ProvaFormView.vue';
+import ProvasListView from '../views/ProvasListView.vue';
 import QuestionBank from '../views/QuestionBank.vue';
 import QuestionFormView from '../views/QuestionFormView.vue';
 import AplicacoesView from '../views/AplicacoesView.vue';
@@ -24,6 +26,18 @@ const routes = [
                 name: 'home',
                 component: HomeView,
                 meta: { title: 'Página inicial' }
+            },
+            {
+                path: 'provas',
+                name: 'exam-list',
+                component: ProvasListView,
+                meta: { title: 'Provas' }
+            },
+            {
+                path: 'provas/novo',
+                name: 'exam-create',
+                component: ProvaFormView,
+                meta: { title: 'Nova prova' }
             },
             {
                 path: 'questoes',
@@ -48,6 +62,12 @@ const routes = [
                 name: 'exam-details',
                 component: ExamDetailsView,
                 meta: { title: 'Detalhes da prova' }
+            },
+            {
+                path: 'provas/:id/editar',
+                name: 'exam-edit',
+                component: ProvaFormView,
+                meta: { title: 'Editar prova' }
             },
             {
                 path: 'aplicacoes',
@@ -78,6 +98,24 @@ const routes = [
                 name: 'application-details',
                 component: AplicacaoDetalhesView,
                 meta: { title: 'Detalhes da aplicação' }
+            },
+            {
+                path: 'pages/turma-detalhes.html',
+                name: 'class-details',
+                component: ClassDetailsView,
+                meta: { title: 'Detalhes da turma' }
+            },
+            {
+                path: 'pages/turmas.html',
+                name: 'class-list',
+                component: ClassListView,
+                meta: { title: 'Turmas' }
+            },
+            {
+                path: 'pages/turma-form.html',
+                name: 'class-form',
+                component: ClassFormView,
+                meta: { title: 'Turma' }
             }
         ]
     },
@@ -99,6 +137,14 @@ const routes = [
     {
         path: '/pages/prova-detalhes.html',
         redirect: (to) => `/provas/${Number(to.query.id) || 1}`
+    },
+    {
+        path: '/pages/provas.html',
+        redirect: '/provas'
+    },
+    {
+        path: '/pages/prova-form.html',
+        redirect: (to) => (to.query.id ? `/provas/${Number(to.query.id)}/editar` : '/provas/novo')
     },
     { path: '/:pathMatch(.*)*', redirect: '/' }
 ];
