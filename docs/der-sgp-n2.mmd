@@ -1,0 +1,171 @@
+erDiagram
+    direction LR
+
+    PROFESSORS ||--o{ CLASSES : "gerencia"
+    PROFESSORS ||--o{ QUESTIONS : "possui"
+    PROFESSORS ||--o{ EXAMS : "cria"
+    PROFESSORS ||--o{ APPLICATIONS : "conduz"
+    PROFESSORS o|..o{ CORRECTIONS : "confirma"
+
+    CLASSES ||--o{ CLASS_STUDENTS : "inclui"
+    STUDENTS ||--o{ CLASS_STUDENTS : "matricula"
+
+    QUESTIONS ||--|{ ALTERNATIVES : "oferece"
+    QUESTIONS ||--o{ QUESTION_TAGS : "classifica"
+    TAGS ||--o{ QUESTION_TAGS : "associa"
+
+    EXAMS ||--o{ EXAM_QUESTIONS : "compoe"
+    QUESTIONS ||--o{ EXAM_QUESTIONS : "integra"
+    EXAMS ||--o{ APPLICATIONS : "origina"
+    CLASSES ||--o{ APPLICATIONS : "recebe"
+
+    APPLICATIONS ||--o{ EXAM_VERSIONS : "gera"
+    EXAM_VERSIONS ||--|{ EXAM_VERSION_QUESTIONS : "ordena"
+    QUESTIONS ||--o{ EXAM_VERSION_QUESTIONS : "reproduz"
+    EXAM_VERSION_QUESTIONS ||--|{ EXAM_VERSION_ALTERNATIVES : "ordena"
+    ALTERNATIVES ||--o{ EXAM_VERSION_ALTERNATIVES : "reproduz"
+
+    EXAM_VERSIONS ||--o{ EXAM_ASSIGNMENTS : "atribui"
+    STUDENTS ||--o{ EXAM_ASSIGNMENTS : "recebe"
+    EXAM_ASSIGNMENTS o|..o| CORRECTIONS : "identifica"
+    EXAM_VERSIONS ||--o{ CORRECTIONS : "corrige"
+    STUDENTS o|..o{ CORRECTIONS : "obtem"
+    CORRECTIONS ||--o{ CORRECTION_ANSWERS : "detalha"
+    QUESTIONS ||--o{ CORRECTION_ANSWERS : "avalia"
+    ALTERNATIVES o|..o{ CORRECTION_ANSWERS : "selecionada"
+
+    PROFESSORS {
+        bigint id PK
+        string fullName
+        string email UK
+        string passwordHash
+        bool isActive
+        datetime createdAt
+    }
+
+    STUDENTS {
+        bigint id PK
+        string fullName
+        string registration UK
+        string email UK
+        string status
+        datetime createdAt
+    }
+
+    CLASSES {
+        bigint id PK
+        bigint teacherId FK
+        string name
+        string subject
+        string academicTerm
+        string status
+        string inviteCode UK
+    }
+
+    CLASS_STUDENTS {
+        bigint classId PK, FK
+        bigint studentId PK, FK
+        string status
+        datetime enrolledAt
+    }
+
+    QUESTIONS {
+        bigint id PK
+        bigint teacherId FK
+        text statement
+        string status
+        datetime createdAt
+    }
+
+    ALTERNATIVES {
+        bigint id PK
+        bigint questionId FK
+        int position
+        string alternativeText
+        bool isCorrect
+    }
+
+    TAGS {
+        bigint id PK
+        string name UK
+    }
+
+    QUESTION_TAGS {
+        bigint questionId PK, FK
+        bigint tagId PK, FK
+    }
+
+    EXAMS {
+        bigint id PK
+        bigint teacherId FK
+        string title
+        text description
+        string status
+        datetime createdAt
+    }
+
+    EXAM_QUESTIONS {
+        bigint examId PK, FK
+        bigint questionId PK, FK
+        int questionOrder
+        decimal score
+    }
+
+    APPLICATIONS {
+        bigint id PK
+        bigint examId FK
+        bigint classId FK
+        bigint teacherId FK
+        string status
+        string pdfUrl
+        datetime scheduledAt
+    }
+
+    EXAM_VERSIONS {
+        bigint id PK
+        bigint applicationId FK
+        int versionNumber
+        bool shuffleQuestions
+        bool shuffleAlternatives
+        string publicCode UK
+        string qrCodePayload UK
+    }
+
+    EXAM_VERSION_QUESTIONS {
+        bigint examVersionId PK, FK
+        bigint questionId PK, FK
+        int printedOrder
+    }
+
+    EXAM_VERSION_ALTERNATIVES {
+        bigint examVersionId PK, FK
+        bigint questionId FK
+        bigint alternativeId PK, FK
+        int printedOrder
+    }
+
+    EXAM_ASSIGNMENTS {
+        bigint id PK
+        bigint examVersionId FK
+        bigint studentId FK
+        string qrCodePayload UK
+        datetime assignedAt
+    }
+
+    CORRECTIONS {
+        bigint id PK
+        bigint examAssignmentId FK, UK
+        bigint examVersionId FK
+        bigint studentId FK
+        bigint correctedBy FK
+        string status
+        decimal totalScore
+    }
+
+    CORRECTION_ANSWERS {
+        bigint correctionId PK, FK
+        bigint questionId PK, FK
+        bigint selectedAlternativeId FK
+        bool isCorrect
+        decimal awardedScore
+    }

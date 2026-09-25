@@ -9,7 +9,10 @@
     "start": "node src/server.js",
     "dev": "vite",
     "dev:server": "nodemon src/server.js",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "db:up": "docker compose up -d db",
+    "db:down": "docker compose down",
+    "db:logs": "docker compose logs -f db"
   },
   "repository": {
     "type": "git",

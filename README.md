@@ -4,13 +4,13 @@
 
 ### Sistema de Gestão de Provas
 
-Plataforma acadêmica para criação, aplicação e correção de provas, voltada a professores e estudantes da Católica SC.
+Plataforma acadêmica para criação, aplicação e correção de provas, operada exclusivamente por professores da Católica SC.
 
 🔗 **Sistema hospedado:** ainda não publicado nesta entrega<br>
 💻 **Código-fonte:** [github.com/VitorRinkawetsky/Correcao-Provas](https://github.com/VitorRinkawetsky/Correcao-Provas)
 
 ![Status](https://img.shields.io/badge/status-em%20desenvolvimento-f0ad4e)
-![Entrega](https://img.shields.io/badge/entrega-N1-0b6e69)
+![Entrega](https://img.shields.io/badge/entrega-N2-0b6e69)
 ![Vue](https://img.shields.io/badge/Vue.js-3-42b883)
 ![Vite](https://img.shields.io/badge/Vite-8-646cff)
 ![Node.js](https://img.shields.io/badge/Node.js-20.19%2B-339933)
@@ -39,6 +39,8 @@ Plataforma acadêmica para criação, aplicação e correção de provas, voltad
   - [2.1 Requisitos Funcionais](#21-requisitos-funcionais)
   - [2.2 Requisitos Não Funcionais](#22-requisitos-não-funcionais)
 - [4. Telas do Sistema](#4-telas-do-sistema)
+- [6. Decisões Arquiteturais](#6-decisões-arquiteturais)
+- [7. Banco de Dados e Especificação N2](#7-banco-de-dados-e-especificação-n2)
 - [8. Stack Tecnológica](#8-stack-tecnológica)
 - [9. Estrutura de Pastas](#9-estrutura-de-pastas)
 - [10. Como Executar](#10-como-executar)
@@ -50,7 +52,7 @@ Plataforma acadêmica para criação, aplicação e correção de provas, voltad
 
 O **SGP Católica** é um projeto acadêmico criado para apoiar o ciclo de avaliações da instituição. A proposta é reduzir o trabalho manual dos professores por meio de um ambiente único para organizar questões, montar provas, gerar aplicações e acompanhar correções.
 
-Nesta entrega **N1**, o repositório apresenta um protótipo navegável em Vue.js, abastecido por dados simulados. Estão disponíveis os fluxos visuais de banco de questões objetivas, criação e edição de questões, detalhes de prova, turmas e aplicações. Integrações persistentes com banco de dados, autenticação e correção automatizada permanecem como evoluções posteriores.
+Na **N1**, o repositório passou a apresentar um protótipo navegável em Vue.js, abastecido por dados simulados. Na **N2**, foi adicionada a base de persistência em MySQL, com schema, dados iniciais, ambiente Docker e conexão no Express. A substituição dos mocks pelos endpoints REST será feita incrementalmente.
 
 ### Objetivos
 
@@ -63,18 +65,19 @@ Nesta entrega **N1**, o repositório apresenta um protótipo navegável em Vue.j
 ### Público-alvo
 
 - Professores responsáveis pela criação e aplicação de avaliações.
-- Estudantes que futuramente consultarão provas, resultados e histórico.
-- Equipe acadêmica responsável pelo acompanhamento do processo avaliativo.
+
+Os alunos são mantidos apenas como registros acadêmicos vinculados às turmas,
+provas e correções. Eles não possuem conta nem acesso ao sistema.
 
 ---
 
 ## 2. Requisitos
 
-Os requisitos abaixo representam a visão do produto. A coluna **Situação na N1** diferencia o que já possui fluxo visual do que está previsto para as próximas entregas.
+Os requisitos abaixo representam a visão do produto. A coluna **Situação atual** diferencia o que já possui fluxo visual do que está previsto para as próximas etapas.
 
 ### 2.1 Requisitos Funcionais
 
-| Código | Requisito | Situação na N1 |
+| Código | Requisito | Situação atual |
 |---|---|---|
 | RF01 | Permitir criar, editar, listar e excluir questões objetivas. | Protótipo funcional |
 | RF02 | Permitir de duas a cinco alternativas por questão e exigir uma única alternativa correta. | Protótipo funcional |
@@ -85,7 +88,7 @@ Os requisitos abaixo representam a visão do produto. A coluna **Situação na N
 | RF07 | Permitir cadastrar turmas e estudantes. | Interface em desenvolvimento |
 | RF08 | Corrigir cartões-resposta por imagem e identificar a prova por QR Code. | Planejado |
 | RF09 | Calcular notas e disponibilizar relatórios e estatísticas da avaliação. | Planejado |
-| RF10 | Autenticar usuários e controlar acessos de professores e estudantes. | Planejado |
+| RF10 | Autenticar professores e restringir os dados ao professor responsável. | Planejado |
 
 ### 2.2 Requisitos Não Funcionais
 
@@ -96,7 +99,7 @@ Os requisitos abaixo representam a visão do produto. A coluna **Situação na N
 | RNF03 | A experiência deve ser simples, consistente e apresentada em português do Brasil. |
 | RNF04 | O front-end deve funcionar como uma aplicação de página única com Vue Router. |
 | RNF05 | Configurações de ambiente e credenciais não devem ser versionadas no código-fonte. |
-| RNF06 | A persistência futura deve utilizar banco relacional MySQL. |
+| RNF06 | A persistência deve utilizar banco relacional MySQL. |
 | RNF07 | Senhas e demais dados sensíveis não devem ser armazenados em texto puro. |
 | RNF08 | O projeto deve possuir comandos reproduzíveis para desenvolvimento, testes e build. |
 
@@ -130,6 +133,23 @@ Exibe as aplicações cadastradas, suas turmas, estados e o progresso de correç
 
 ---
 
+## 6. Decisões Arquiteturais
+
+- [ADR-001 — Uso de MySQL como banco relacional](docs/adr/ADR-001-banco-de-dados-mysql.md)
+- [ADR-002 — Acesso exclusivo de professores](docs/adr/ADR-002-acesso-exclusivo-professores.md)
+
+---
+
+## 7. Banco de Dados e Especificação N2
+
+- [Especificação técnica N2 para desenvolvedores](docs/especificacao-n2-desenvolvedores.md)
+- [Análise de implementação do banco de dados](docs/n2-banco-dados.md)
+- [DER interativo no FigJam](https://www.figma.com/board/8tCcW4wk7t3w2adUv34xBT?utm_source=chatgpt&utm_content=edit_in_figjam&oai_id=v1%2Fq5XUnBHbCjMfA9GW3qVOlu0BpFFJZZdnYOyAG9tDdxes1P3BzDT9Yi)
+- [DER do banco em Mermaid](docs/der-sgp-n2.mmd)
+- [Schema e dados iniciais](database/init.sql)
+
+---
+
 ## 8. Stack Tecnológica
 
 | Camada | Tecnologia | Uso no projeto |
@@ -140,7 +160,7 @@ Exibe as aplicações cadastradas, suas turmas, estados e o progresso de correç
 | Estilos | CSS | Layout responsivo, tokens visuais e componentes |
 | Ícones | Lucide Vue Next | Iconografia da interface |
 | Servidor | Node.js e Express 5 | Entrega do build de produção e fallback da SPA |
-| Banco de dados | MySQL 2 | Dependência preparada para a persistência futura |
+| Banco de dados | MySQL 8.4 e MySQL2 | Persistência relacional e pool de conexões |
 | Testes | Vitest | Testes automatizados do front-end |
 | Versionamento | Git e GitHub | Histórico e colaboração do projeto |
 
@@ -150,7 +170,10 @@ Exibe as aplicações cadastradas, suas turmas, estados e o progresso de correç
 
 ```text
 Correcao-Provas/
+├── database/
+│   └── init.sql                # Criação do schema e carga dos dados iniciais
 ├── docs/
+│   ├── adr/                    # Decisões arquiteturais da N2
 │   └── telas/                  # Capturas utilizadas nesta documentação
 ├── src/
 │   ├── client/
@@ -162,10 +185,11 @@ Correcao-Provas/
 │   │   ├── views/              # Telas organizadas por fluxo
 │   │   ├── App.vue
 │   │   └── main.js
-│   ├── config/                 # Configuração reservada ao banco de dados
+│   ├── config/                 # Pool de conexões com o MySQL
 │   ├── app.js                  # Aplicação Express
 │   └── server.js               # Inicialização do servidor
 ├── .env.example                # Modelo das variáveis de ambiente
+├── compose.yaml                # MySQL local com Docker Compose
 ├── index.html                  # Entrada do Vite
 ├── package.json                # Dependências e scripts
 ├── README.md
@@ -181,7 +205,7 @@ Correcao-Provas/
 - [Git](https://git-scm.com/)
 - [Node.js](https://nodejs.org/) 20.19 ou superior, ou 22.12 ou superior
 - npm
-- MySQL apenas para as integrações futuras de persistência
+- Docker Desktop, ou uma instalação local do MySQL 8.4
 
 ### Ambiente de desenvolvimento
 
@@ -211,7 +235,22 @@ npm run dev
 
 A aplicação ficará disponível, por padrão, em [http://localhost:5173](http://localhost:5173).
 
-> A entrega N1 utiliza dados simulados no front-end. As variáveis de banco existentes no arquivo `.env.example` estão reservadas para a integração posterior.
+Para iniciar o banco da N2:
+
+```bash
+npm run db:up
+```
+
+Para validar a conexão pelo Express:
+
+```bash
+npm run build
+npm start
+```
+
+Abra [http://localhost:3000/api/health](http://localhost:3000/api/health).
+
+> O banco e a conexão estão funcionais, mas as telas ainda usam os dados simulados enquanto os CRUDs REST são implementados. Consulte [a análise da integração da N2](docs/n2-banco-dados.md).
 
 ### Testes
 

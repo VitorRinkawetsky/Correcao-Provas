@@ -1,72 +1,66 @@
 import { reactive } from 'vue';
 
-export const users = [
+export const professors = [
     {
         id: 1,
-        role: 'professor',
         fullName: 'Carlos Henrique Silva',
         email: 'carlos.silva@catolicasc.org.br',
         createdAt: '2026-08-01T10:00:00.000Z'
-    },
+    }
+];
+
+export const students = [
     {
-        id: 2,
-        role: 'estudante',
+        id: 1,
         fullName: 'João Silva',
         email: 'joao.silva@catolicasc.edu.br',
         registration: '20260001',
         createdAt: '2026-08-01T10:05:00.000Z'
     },
     {
-        id: 3,
-        role: 'estudante',
+        id: 2,
         fullName: 'Maria Oliveira',
         email: 'maria.oliveira@catolicasc.edu.br',
         registration: '20260002',
         createdAt: '2026-08-01T10:10:00.000Z'
     },
     {
-        id: 4,
-        role: 'estudante',
+        id: 3,
         fullName: 'Pedro Souza',
         email: 'pedro.souza@catolicasc.edu.br',
         registration: '20260003',
         createdAt: '2026-08-01T10:15:00.000Z'
     },
     {
-        id: 5,
-        role: 'estudante',
+        id: 4,
         fullName: 'Ana Souza',
         email: 'ana.souza@catolicasc.edu.br',
         registration: '20260004',
         createdAt: '2026-08-01T10:20:00.000Z'
     },
     {
-        id: 6,
-        role: 'estudante',
+        id: 5,
         fullName: 'Lucas Ferreira',
         email: 'lucas.ferreira@catolicasc.edu.br',
         registration: '20260005',
         createdAt: '2026-08-01T10:25:00.000Z'
     },
     {
-        id: 7,
-        role: 'estudante',
+        id: 6,
         fullName: 'Beatriz Almeida',
         email: 'beatriz.almeida@catolicasc.edu.br',
         registration: '20260006',
         createdAt: '2026-08-01T10:30:00.000Z'
     },
     {
-        id: 8,
-        role: 'estudante',
+        id: 7,
         fullName: 'Gabriel Martins',
         email: 'gabriel.martins@catolicasc.edu.br',
         registration: '20260007',
         createdAt: '2026-08-01T10:35:00.000Z'
     },
     {
-        id: 9,
-        role: 'estudante',
+        id: 8,
         fullName: 'Camila Rodrigues',
         email: 'camila.rodrigues@catolicasc.edu.br',
         registration: '20260008',
@@ -83,7 +77,7 @@ export const classes = [
         term: '2026/2',
         status: 'active',
         inviteCode: 'AB82CD',
-        studentIds: [2, 3, 4]
+        studentIds: [1, 2, 3]
     },
     {
         id: 2,
@@ -93,7 +87,7 @@ export const classes = [
         term: '2026/2',
         status: 'active',
         inviteCode: 'WEB26B',
-        studentIds: [4, 5, 6, 7, 8, 9]
+        studentIds: [3, 4, 5, 6, 7, 8]
     }
 ];
 
@@ -389,19 +383,16 @@ export const examVersions = [
 ];
 
 export const examAssignments = [
-    { id: 1, examVersionId: 1, studentId: 2, qrCodePayload: 'MOCK-QR-STUDENT-01' },
-    { id: 2, examVersionId: 2, studentId: 3, qrCodePayload: 'MOCK-QR-STUDENT-02' },
-    { id: 3, examVersionId: 3, studentId: 4, qrCodePayload: 'MOCK-QR-STUDENT-03' },
-    { id: 4, examVersionId: 1, studentId: 5, qrCodePayload: 'MOCK-QR-STUDENT-04' },
-    { id: 5, examVersionId: 2, studentId: 6, qrCodePayload: 'MOCK-QR-STUDENT-05' },
-    { id: 6, examVersionId: 3, studentId: 7, qrCodePayload: 'MOCK-QR-STUDENT-06' }
+    { id: 1, examVersionId: 1, studentId: 1, qrCodePayload: 'MOCK-QR-STUDENT-01' },
+    { id: 2, examVersionId: 2, studentId: 2, qrCodePayload: 'MOCK-QR-STUDENT-02' },
+    { id: 3, examVersionId: 3, studentId: 3, qrCodePayload: 'MOCK-QR-STUDENT-03' }
 ];
 
 export const corrections = [
     {
         id: 1,
         examVersionId: 1,
-        studentId: 2,
+        studentId: 1,
         objectiveResults: [
             { questionId: 1, selectedAlternativeId: 2, correct: true, score: 1.5 },
             { questionId: 2, selectedAlternativeId: 5, correct: true, score: 1.5 },
@@ -419,7 +410,7 @@ export const corrections = [
     {
         id: 2,
         examVersionId: 2,
-        studentId: 3,
+        studentId: 2,
         objectiveResults: [
             { questionId: 1, selectedAlternativeId: 2, correct: true, score: 1.5 },
             { questionId: 2, selectedAlternativeId: 5, correct: true, score: 1.5 },
@@ -437,7 +428,7 @@ export const corrections = [
     {
         id: 3,
         examVersionId: 3,
-        studentId: 4,
+        studentId: 3,
         objectiveResults: [
             { questionId: 1, selectedAlternativeId: 1, correct: false, score: 0 },
             { questionId: 2, selectedAlternativeId: 5, correct: true, score: 1.5 },
@@ -457,7 +448,7 @@ export const corrections = [
         examVersionId: 4,
         studentId: null,
         reportedStudentName: 'Pedro Santos',
-        reportedStudentRegistration: '20260003',
+        reportedStudentRegistration: '20269999',
         objectiveResults: [
             { questionId: 4, selectedAlternativeId: 15, correct: true, score: 2 },
             { questionId: 7, selectedAlternativeId: 27, correct: true, score: 2 },
@@ -497,7 +488,8 @@ export const statusTones = {
     archived: 'muted'
 };
 
-export const getUserById = (id) => users.find((user) => user.id === Number(id));
+export const getProfessorById = (id) => professors.find((professor) => professor.id === Number(id));
+export const getStudentById = (id) => students.find((student) => student.id === Number(id));
 export const getClassById = (id) => classes.find((item) => item.id === Number(id));
 export const getQuestionById = (id) => questions.find((question) => question.id === Number(id));
 export const getExamById = (id) => exams.find((exam) => exam.id === Number(id));
@@ -506,7 +498,7 @@ export const getApplicationById = (id) => applications.find((application) => app
 export const getStudentsByClassId = (classId) => {
     const classItem = getClassById(classId);
     return classItem
-        ? classItem.studentIds.map(getUserById).filter((user) => user?.role === 'estudante')
+        ? classItem.studentIds.map(getStudentById).filter(Boolean)
         : [];
 };
 
