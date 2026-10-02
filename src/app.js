@@ -2,6 +2,8 @@ const express = require('express');
 const path = require('path');
 
 const { pool } = require('./config/database');
+const classesRoutes = require('./routes/classesRoutes');
+const { handleApiError } = require('./http/ApiError');
 
 const app = express();
 const distPath = path.join(__dirname, '../dist');
@@ -27,6 +29,9 @@ app.get('/api/health', async (_request, response) => {
         });
     }
 });
+
+app.use('/api/classes', classesRoutes);
+app.use('/api/classes', handleApiError);
 
 app.use('/api', (_request, response) => {
     response.status(404).json({

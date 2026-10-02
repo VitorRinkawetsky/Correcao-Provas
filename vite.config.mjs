@@ -6,7 +6,10 @@ export default defineConfig({
     plugins: [vue()],
     server: {
         host: '127.0.0.1',
-        port: 5173
+        port: 5173,
+        proxy: {
+            '/api/classes': 'http://127.0.0.1:3000'
+        }
     },
     preview: {
         host: '127.0.0.1',

@@ -1,0 +1,87 @@
+@baseUrl = http://localhost:3000/api/classes
+@classId = 1
+@studentId = 1
+
+### Listar turmas ativas
+GET {{baseUrl}}
+Accept: application/json
+
+### Listar turmas arquivadas
+GET {{baseUrl}}?status=archived
+Accept: application/json
+
+### Criar turma (use o data.id retornado como classId nas proximas chamadas)
+POST {{baseUrl}}
+Content-Type: application/json
+
+{
+  "name": "Engenharia de Software - 4a fase",
+  "subject": "Banco de Dados",
+  "academicTerm": "2026/2"
+}
+
+### Consultar detalhes e alunos
+GET {{baseUrl}}/{{classId}}
+Accept: application/json
+
+### Editar ou reativar turma
+PUT {{baseUrl}}/{{classId}}
+Content-Type: application/json
+
+{
+  "name": "Engenharia de Software - 4a fase",
+  "subject": "Banco de Dados",
+  "academicTerm": "2026/2",
+  "status": "active"
+}
+
+### Regenerar convite
+POST {{baseUrl}}/{{classId}}/invite-code
+
+### Listar alunos
+GET {{baseUrl}}/{{classId}}/students
+Accept: application/json
+
+### Vincular aluno existente por e-mail
+POST {{baseUrl}}/{{classId}}/students
+Content-Type: application/json
+
+{
+  "email": "joao.silva@catolicasc.edu.br"
+}
+
+### Vincular aluno existente por ID
+POST {{baseUrl}}/{{classId}}/students
+Content-Type: application/json
+
+{
+  "studentId": {{studentId}}
+}
+
+### Vincular aluno existente por matricula
+POST {{baseUrl}}/{{classId}}/students
+Content-Type: application/json
+
+{
+  "registration": "20260001"
+}
+
+### Cadastrar e vincular novo aluno (use o data.id retornado como studentId)
+POST {{baseUrl}}/{{classId}}/students
+Content-Type: application/json
+
+{
+  "fullName": "Aluno Exemplo",
+  "registration": "20260009",
+  "email": "aluno.exemplo@catolicasc.edu.br"
+}
+
+### Consultar notas do aluno na turma
+GET {{baseUrl}}/{{classId}}/students/{{studentId}}/grades
+Accept: application/json
+
+### Remover somente o vinculo do aluno
+DELETE {{baseUrl}}/{{classId}}/students/{{studentId}}
+
+### Arquivar turma, preservando seus dados e historico
+DELETE {{baseUrl}}/{{classId}}
