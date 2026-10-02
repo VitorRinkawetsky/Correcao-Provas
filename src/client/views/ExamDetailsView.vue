@@ -1,17 +1,50 @@
 <script setup>
 import { Archive, ArrowLeft, Edit3, FilePlus2, FileText, ListChecks } from '@lucide/vue';
-import { computed } from 'vue';
+import { onMounted, ref } from 'vue';
 import { RouterLink, useRoute } from 'vue-router';
 
 import StatusBadge from '../components/ui/StatusBadge.vue';
-import { formatScore, getExamDetails } from '../data/mockData';
+import { formatScore } from '../data/mockData';
+import { getExamDetails } from '../services/examApi';
 
 const route = useRoute();
-const exam = computed(() => getExamDetails(route.params.id));
+const exam = ref(null);
+const loading = ref(true);
+const errorMessage = ref('');
+
+onMounted(async () => {
+    try {
+        exam.value = await getExamDetails(route.params.id);
+    } catch (error) {
+        errorMessage.value = error.status === 404
+            ? ''
+            : error.message;
+    } finally {
+        loading.value = false;
+    }
+});
 </script>
 
 <template>
-    <section v-if="exam" class="exam-details-page">
+    <section v-if="loading" class="not-found-state">
+        <span class="not-found-state__icon" aria-hidden="true">
+            <FileText :size="32" :stroke-width="1.6" />
+        </span>
+        <p class="eyebrow">Detalhes da prova</p>
+        <h1>Carregando prova...</h1>
+    </section>
+
+    <section v-else-if="errorMessage" class="not-found-state">
+        <span class="not-found-state__icon" aria-hidden="true">
+            <FileText :size="32" :stroke-width="1.6" />
+        </span>
+        <p class="eyebrow">Detalhes da prova</p>
+        <h1>Nao foi possivel carregar a prova.</h1>
+        <p>{{ errorMessage }}</p>
+        <RouterLink to="/" class="button button--primary">Voltar para a pagina inicial</RouterLink>
+    </section>
+
+    <section v-else-if="exam" class="exam-details-page">
         <RouterLink to="/" class="back-link">
             <ArrowLeft :size="17" />
             Voltar para a página inicial
