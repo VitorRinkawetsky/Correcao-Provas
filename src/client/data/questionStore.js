@@ -1,13 +1,12 @@
 import { readonly, ref } from 'vue';
 
-import { questions as initialQuestions } from './mockData';
-
-const STORAGE_KEY = 'sgp-catolica:questions:v1';
-
 const clone = (value) => JSON.parse(JSON.stringify(value));
 
 export const normalizeTags = (value) => {
-    const source = Array.isArray(value) ? value : String(value || '').split(',');
+    const source = Array.isArray(value)
+        ? value
+        : String(value || '').split(',');
+
     const seen = new Set();
 
     return source.reduce((tags, item) => {
@@ -25,23 +24,38 @@ export const normalizeTags = (value) => {
 
 export const validateQuestionInput = (input) => {
     const errors = {};
-    const alternatives = Array.isArray(input.alternatives) ? input.alternatives : [];
-    const correctAlternativeIndex = Number(input.correctAlternativeIndex);
+    const alternatives = Array.isArray(input.alternatives)
+        ? input.alternatives
+        : [];
+
+    const correctAlternativeIndex = Number(
+        input.correctAlternativeIndex
+    );
 
     if (!String(input.statement || '').trim()) {
         errors.statement = 'Informe o enunciado da questão.';
     }
 
     if (alternatives.length < 2 || alternatives.length > 5) {
-        errors.alternatives = 'A questão deve ter entre 2 e 5 alternativas.';
-    } else if (alternatives.some((alternative) => !String(alternative.text || '').trim())) {
-        errors.alternatives = 'Preencha o texto de todas as alternativas.';
+        errors.alternatives =
+            'A questão deve ter entre 2 e 5 alternativas.';
+    } else if (
+        alternatives.some(
+            (alternative) =>
+                !String(alternative.text || '').trim()
+        )
+    ) {
+        errors.alternatives =
+            'Preencha o texto de todas as alternativas.';
     }
 
-    if (!Number.isInteger(correctAlternativeIndex)
-        || correctAlternativeIndex < 0
-        || correctAlternativeIndex >= alternatives.length) {
-        errors.correctAlternativeId = 'Selecione exatamente uma alternativa correta.';
+    if (
+        !Number.isInteger(correctAlternativeIndex) ||
+        correctAlternativeIndex < 0 ||
+        correctAlternativeIndex >= alternatives.length
+    ) {
+        errors.correctAlternativeId =
+            'Selecione exatamente uma alternativa correta.';
     }
 
     return {
@@ -56,106 +70,124 @@ const normalizeQuestion = (question) => ({
     teacherId: Number(question.teacherId || 1),
     type: 'objetiva',
     statement: String(question.statement || '').trim(),
+    status: question.status || 'active',
     tags: normalizeTags(question.tags),
-    alternatives: (question.alternatives || []).slice(0, 5).map((alternative) => ({
-        id: Number(alternative.id),
-        text: String(alternative.text || '').trim()
-    })),
+    alternatives: (question.alternatives || [])
+        .slice(0, 5)
+        .map((alternative) => ({
+            id: Number(alternative.id),
+            text: String(alternative.text || '').trim(),
+            position: Number(alternative.position || 0),
+            isCorrect: Boolean(alternative.isCorrect)
+        })),
     correctAlternativeId: Number(question.correctAlternativeId)
 });
 
-const defaultQuestions = () => clone(initialQuestions)
-    .filter((question) => question.type === 'objetiva')
-    .map(normalizeQuestion);
+const questionsState = ref([]);
 
-const loadQuestions = () => {
-    if (typeof window === 'undefined') return defaultQuestions();
+const getQuestion = (id) =>
+    questionsState.value.find(
+        (question) => question.id === Number(id)
+    ) || null;
 
-    try {
-        const storedQuestions = window.localStorage.getItem(STORAGE_KEY);
-        if (storedQuestions === null) return defaultQuestions();
+export const loadQuestions = async () => {
+    const response = await fetch('/api/questions');
 
-        const parsedQuestions = JSON.parse(storedQuestions);
-        if (!Array.isArray(parsedQuestions)) return defaultQuestions();
-
-        return parsedQuestions
-            .filter((question) => question?.type === 'objetiva')
-            .map(normalizeQuestion);
-    } catch {
-        return defaultQuestions();
+    if (!response.ok) {
+        throw new Error(
+            'Não foi possível carregar as questões.'
+        );
     }
+
+    const data = await response.json();
+
+    questionsState.value = Array.isArray(data)
+        ? data.map(normalizeQuestion)
+        : [];
+
+    return questionsState.value;
 };
 
-const questionsState = ref(loadQuestions());
-
-const persistQuestions = () => {
-    if (typeof window === 'undefined') return;
-
-    try {
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(questionsState.value));
-    } catch {
-        // A interface continua funcional durante a sessão quando o armazenamento está indisponível.
-    }
-};
-
-const nextQuestionId = () => Math.max(0, ...questionsState.value.map((question) => question.id)) + 1;
-
-const nextAlternativeId = () => Math.max(
-    0,
-    ...questionsState.value.flatMap((question) => question.alternatives.map((alternative) => alternative.id))
-) + 1;
-
-const getQuestion = (id) => questionsState.value.find((question) => question.id === Number(id)) || null;
-
-const saveQuestion = (input, id = null) => {
+const saveQuestion = async (input, id = null) => {
     const validation = validateQuestionInput(input);
+
     if (!validation.valid) {
-        const error = new Error('Não foi possível salvar a questão.');
+        const error = new Error(
+            'Não foi possível salvar a questão.'
+        );
+
         error.validationErrors = validation.errors;
         throw error;
     }
 
-    const existingQuestion = id === null ? null : getQuestion(id);
-    if (id !== null && !existingQuestion) {
-        throw new Error('Questão não encontrada.');
-    }
-
-    let alternativeId = nextAlternativeId();
-    const alternatives = input.alternatives.map((alternative) => ({
-        id: alternative.id !== null
-            && alternative.id !== undefined
-            && Number.isFinite(Number(alternative.id))
-            ? Number(alternative.id)
-            : alternativeId++,
-        text: String(alternative.text).trim()
-    }));
-
-    const question = {
-        id: existingQuestion?.id ?? nextQuestionId(),
-        teacherId: existingQuestion?.teacherId ?? 1,
-        type: 'objetiva',
+    const payload = {
         statement: String(input.statement).trim(),
+        teacherId: 1,
         tags: normalizeTags(input.tags),
-        alternatives,
-        correctAlternativeId: alternatives[Number(input.correctAlternativeIndex)].id
+        alternatives: input.alternatives.map(
+            (alternative) => ({
+                text: String(alternative.text).trim()
+            })
+        ),
+        correctAlternativeIndex: Number(
+            input.correctAlternativeIndex
+        )
     };
 
-    if (existingQuestion) {
-        questionsState.value = questionsState.value.map((item) => item.id === question.id ? question : item);
-    } else {
-        questionsState.value = [question, ...questionsState.value];
+    const url = id === null
+        ? '/api/questions'
+        : `/api/questions/${id}`;
+
+    const method = id === null ? 'POST' : 'PUT';
+
+    const response = await fetch(url, {
+        method,
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+        const error = new Error(
+            data.message ||
+            'Não foi possível salvar a questão.'
+        );
+
+        error.validationErrors =
+            data.validationErrors || {};
+
+        throw error;
     }
 
-    persistQuestions();
-    return clone(question);
+    await loadQuestions();
+
+    return data;
 };
 
-const deleteQuestion = (id) => {
-    const nextQuestions = questionsState.value.filter((question) => question.id !== Number(id));
-    if (nextQuestions.length === questionsState.value.length) return false;
+const deleteQuestion = async (id) => {
+    const response = await fetch(
+        `/api/questions/${id}`,
+        {
+            method: 'DELETE'
+        }
+    );
 
-    questionsState.value = nextQuestions;
-    persistQuestions();
+    if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+
+        throw new Error(
+            data.message ||
+            'Não foi possível excluir a questão.'
+        );
+    }
+
+    questionsState.value = questionsState.value.filter(
+        (question) => question.id !== Number(id)
+    );
+
     return true;
 };
 
@@ -163,5 +195,6 @@ export const useQuestionStore = () => ({
     questions: readonly(questionsState),
     getQuestion,
     saveQuestion,
-    deleteQuestion
+    deleteQuestion,
+    loadQuestions
 });
