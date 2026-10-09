@@ -6,9 +6,7 @@
   <title>Banco de Questões | SGP Católica</title>
 
   <style>
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       margin: 0;
@@ -18,10 +16,7 @@
       color: #1f2937;
     }
 
-    .container {
-      max-width: 1100px;
-      margin: 0 auto;
-    }
+    .container { max-width: 1100px; margin: 0 auto; }
 
     .header {
       display: flex;
@@ -31,23 +26,10 @@
       margin-bottom: 28px;
     }
 
-    h1 {
-      margin: 0;
-      font-size: 28px;
-      color: #12345a;
-    }
+    h1 { margin: 0; font-size: 28px; color: #12345a; }
+    .subtitle { margin-top: 8px; color: #64748b; font-size: 14px; }
 
-    .subtitle {
-      margin-top: 8px;
-      color: #64748b;
-      font-size: 14px;
-    }
-
-    button,
-    input,
-    select {
-      font: inherit;
-    }
+    button, input, select { font: inherit; }
 
     button {
       cursor: pointer;
@@ -55,16 +37,10 @@
       padding: 10px 15px;
       border: 1px solid transparent;
     }
+    button:disabled { opacity: .6; cursor: not-allowed; }
 
-    .primary {
-      background: #155eef;
-      color: white;
-      font-weight: 600;
-    }
-
-    .primary:hover {
-      background: #104bc4;
-    }
+    .primary { background: #155eef; color: white; font-weight: 600; }
+    .primary:hover { background: #104bc4; }
 
     .filters {
       display: grid;
@@ -77,20 +53,10 @@
       margin-bottom: 22px;
     }
 
-    .field {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
+    .field { display: flex; flex-direction: column; gap: 8px; }
+    label { font-size: 13px; font-weight: 600; color: #475569; }
 
-    label {
-      font-size: 13px;
-      font-weight: 600;
-      color: #475569;
-    }
-
-    input,
-    select {
+    input, select {
       width: 100%;
       min-width: 0;
       padding: 11px 12px;
@@ -100,12 +66,20 @@
       color: #1f2937;
       outline: none;
     }
-
-    input:focus,
-    select:focus {
+    input:focus, select:focus {
       border-color: #155eef;
       box-shadow: 0 0 0 3px #155eef20;
     }
+
+    .alert {
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      font-size: 14px;
+    }
+    .alert[hidden] { display: none; }
+    .alert.success { background: #ecfdf3; color: #067647; border: 1px solid #abefc6; }
+    .alert.error { background: #fef3f2; color: #b42318; border: 1px solid #fecdca; }
 
     .list-header {
       display: flex;
@@ -114,16 +88,8 @@
       margin: 24px 0 12px;
       gap: 12px;
     }
-
-    .list-header h2 {
-      font-size: 17px;
-      margin: 0;
-    }
-
-    .count {
-      color: #64748b;
-      font-size: 13px;
-    }
+    .list-header h2 { font-size: 17px; margin: 0; }
+    .count { color: #64748b; font-size: 13px; }
 
     .question-card {
       display: flex;
@@ -136,23 +102,10 @@
       border: 1px solid #e2e8f0;
       border-radius: 10px;
     }
+    .question-content { min-width: 0; }
+    .question-title { font-size: 16px; font-weight: 600; margin: 0 0 12px; }
 
-    .question-content {
-      min-width: 0;
-    }
-
-    .question-title {
-      font-size: 16px;
-      font-weight: 600;
-      margin: 0 0 12px;
-    }
-
-    .metadata {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 8px;
-    }
+    .metadata { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 
     .badge {
       display: inline-block;
@@ -162,29 +115,11 @@
       color: #1d4ed8;
       font-size: 12px;
     }
+    .tag { background: #f1f5f9; color: #475569; }
 
-    .tag {
-      background: #f1f5f9;
-      color: #475569;
-    }
-
-    .actions {
-      display: flex;
-      gap: 8px;
-      flex-shrink: 0;
-    }
-
-    .edit {
-      background: white;
-      border-color: #cbd5e1;
-      color: #334155;
-    }
-
-    .delete {
-      background: white;
-      border-color: #fecaca;
-      color: #b91c1c;
-    }
+    .actions { display: flex; gap: 8px; flex-shrink: 0; }
+    .edit { background: white; border-color: #cbd5e1; color: #334155; }
+    .delete { background: white; border-color: #fecaca; color: #b91c1c; }
 
     .empty {
       padding: 36px 20px;
@@ -196,27 +131,11 @@
     }
 
     @media (max-width: 750px) {
-      body {
-        padding: 20px 14px;
-      }
-
-      .header {
-        align-items: flex-start;
-        flex-direction: column;
-      }
-
-      .filters {
-        grid-template-columns: 1fr;
-      }
-
-      .question-card {
-        align-items: flex-start;
-        flex-direction: column;
-      }
-
-      .actions {
-        width: 100%;
-      }
+      body { padding: 20px 14px; }
+      .header { align-items: flex-start; flex-direction: column; }
+      .filters { grid-template-columns: 1fr; }
+      .question-card { align-items: flex-start; flex-direction: column; }
+      .actions { width: 100%; }
     }
   </style>
 </head>
@@ -226,24 +145,15 @@
     <header class="header">
       <div>
         <h1>Banco de questões</h1>
-        <p class="subtitle">
-          Consulte, pesquise e gerencie suas questões.
-        </p>
+        <p class="subtitle">Consulte, pesquise e gerencie suas questões.</p>
       </div>
-
-      <button class="primary" id="novaQuestao">
-        + Nova questão
-      </button>
+      <button class="primary" id="novaQuestao">+ Nova questão</button>
     </header>
 
     <section class="filters" aria-label="Filtros de questões">
       <div class="field">
         <label for="pesquisa">Pesquisar por texto</label>
-        <input
-          id="pesquisa"
-          type="search"
-          placeholder="Digite parte do enunciado..."
-        >
+        <input id="pesquisa" type="search" placeholder="Digite parte do enunciado...">
       </div>
 
       <div class="field">
@@ -257,13 +167,11 @@
 
       <div class="field">
         <label for="tags">Tags</label>
-        <input
-          id="tags"
-          type="text"
-          placeholder="Ex.: Banco de Dados"
-        >
+        <input id="tags" type="text" placeholder="Ex.: Banco de Dados">
       </div>
     </section>
+
+    <div id="mensagem" class="alert" role="status" hidden></div>
 
     <div class="list-header">
       <h2>Questões cadastradas</h2>
@@ -274,92 +182,127 @@
   </main>
 
   <script>
-    // Dados demonstrativos.
-    // Substituir pela integração com a API do projeto.
-    const questoes = [
-      {
-        id: 1,
-        enunciado: "O que é normalização?",
-        tipo: "Objetiva",
-        tags: ["Banco de Dados"]
-      },
-      {
-        id: 2,
-        enunciado: "Qual é a função de uma chave primária?",
-        tipo: "Objetiva",
-        tags: ["Banco de Dados", "SQL"]
-      },
-      {
-        id: 3,
-        enunciado: "Explique o conceito de encapsulamento.",
-        tipo: "Discursiva",
-        tags: ["Programação", "POO"]
-      }
-    ];
+    const API_URL = "/api/questoes";
 
     const pesquisa = document.getElementById("pesquisa");
     const tipo = document.getElementById("tipo");
     const tags = document.getElementById("tags");
     const lista = document.getElementById("lista");
     const contador = document.getElementById("contador");
+    const mensagem = document.getElementById("mensagem");
 
-    function renderizar() {
-      const texto = pesquisa.value
-        .trim()
-        .toLocaleLowerCase("pt-BR");
+    let controladorAtual = null;
+    let temporizador = null;
 
-      const tipoSelecionado = tipo.value;
+    function mostrarMensagem(texto, tipoMsg) {
+      mensagem.textContent = texto;
+      mensagem.className = `alert ${tipoMsg}`;
+      mensagem.hidden = false;
+    }
 
-      const tagsDigitadas = tags.value
-        .split(",")
-        .map(tag => tag.trim().toLocaleLowerCase("pt-BR"))
-        .filter(Boolean);
+    function limparMensagem() {
+      mensagem.hidden = true;
+      mensagem.textContent = "";
+    }
 
-      const filtradas = questoes.filter(questao => {
-        const correspondeTexto =
-          questao.enunciado
-            .toLocaleLowerCase("pt-BR")
-            .includes(texto);
-
-        const correspondeTipo =
-          !tipoSelecionado ||
-          questao.tipo === tipoSelecionado;
-
-        const tagsQuestao = questao.tags.map(tag =>
-          tag.toLocaleLowerCase("pt-BR")
-        );
-
-        const correspondeTags = tagsDigitadas.every(tag =>
-          tagsQuestao.some(tagQuestao =>
-            tagQuestao.includes(tag)
-          )
-        );
-
-        return (
-          correspondeTexto &&
-          correspondeTipo &&
-          correspondeTags
-        );
+    async function chamarApi(url, opcoes = {}) {
+      const resposta = await fetch(url, {
+        credentials: "same-origin",
+        headers: { Accept: "application/json" },
+        ...opcoes
       });
 
+      let corpo = null;
+      try { corpo = await resposta.json(); } catch { /* sem corpo */ }
+
+      if (!resposta.ok) {
+        const detalhes = Array.isArray(corpo?.detalhes)
+          ? " " + corpo.detalhes.join(" ")
+          : "";
+        throw new Error((corpo?.erro || `Erro ${resposta.status}.`) + detalhes);
+      }
+      return corpo;
+    }
+
+    function mensagemLista(texto, classe) {
+      lista.replaceChildren();
+      const bloco = document.createElement("div");
+      bloco.className = classe;
+      bloco.textContent = texto;
+      lista.appendChild(bloco);
+    }
+
+    async function carregar() {
+      if (controladorAtual) controladorAtual.abort();
+      controladorAtual = new AbortController();
+      const { signal } = controladorAtual;
+
+      const params = new URLSearchParams();
+      if (pesquisa.value.trim()) params.set("texto", pesquisa.value.trim());
+      if (tipo.value) params.set("tipo", tipo.value);
+      if (tags.value.trim()) params.set("tags", tags.value.trim());
+
+      contador.textContent = "Carregando...";
+
+      try {
+        const questoes = await chamarApi(`${API_URL}?${params}`, { signal });
+        renderizar(questoes);
+      } catch (erro) {
+        if (erro.name === "AbortError") return;
+        contador.textContent = "";
+        mensagemLista("Não foi possível carregar as questões.", "empty");
+        mostrarMensagem(erro.message, "error");
+      }
+    }
+
+    function agendarCarga() {
+      clearTimeout(temporizador);
+      temporizador = setTimeout(carregar, 300);
+    }
+
+    async function excluirQuestao(questao, botao) {
+      if (!window.confirm("Deseja realmente excluir esta questão?")) return;
+
+      limparMensagem();
+      botao.disabled = true;
+      botao.textContent = "Excluindo...";
+
+      try {
+        // Só mostra sucesso depois que a API confirmar.
+        const resultado = await chamarApi(
+          `${API_URL}/${encodeURIComponent(questao.id)}`,
+          { method: "DELETE" }
+        );
+
+        mostrarMensagem(
+          resultado.arquivada
+            ? "Questão já usada em prova: foi arquivada e o histórico foi preservado."
+            : "Questão excluída com sucesso.",
+          "success"
+        );
+        await carregar();
+      } catch (erro) {
+        mostrarMensagem(`Não foi possível excluir: ${erro.message}`, "error");
+        botao.disabled = false;
+        botao.textContent = "Excluir";
+      }
+    }
+
+    function renderizar(questoes) {
       contador.textContent =
-        `${filtradas.length} ${
-          filtradas.length === 1 ? "questão" : "questões"
-        }`;
+        `${questoes.length} ${questoes.length === 1 ? "questão" : "questões"}`;
 
       lista.replaceChildren();
 
-      if (filtradas.length === 0) {
-        const vazio = document.createElement("div");
-        vazio.className = "empty";
-        vazio.textContent =
-          "Nenhuma questão encontrada para os filtros informados.";
-
-        lista.appendChild(vazio);
+      if (questoes.length === 0) {
+        mensagemLista(
+          "Nenhuma questão encontrada para os filtros informados.",
+          "empty"
+        );
         return;
       }
 
-      filtradas.forEach(questao => {
+      questoes.forEach(questao => {
         const card = document.createElement("article");
         card.className = "question-card";
 
@@ -376,14 +319,12 @@
         const tipoBadge = document.createElement("span");
         tipoBadge.className = "badge";
         tipoBadge.textContent = questao.tipo;
-
         metadata.appendChild(tipoBadge);
 
-        questao.tags.forEach(tag => {
+        (questao.tags || []).forEach(tag => {
           const tagBadge = document.createElement("span");
           tagBadge.className = "badge tag";
           tagBadge.textContent = tag;
-
           metadata.appendChild(tagBadge);
         });
 
@@ -395,37 +336,15 @@
         const editar = document.createElement("button");
         editar.className = "edit";
         editar.textContent = "Editar";
-
         editar.addEventListener("click", () => {
           window.location.href =
-            `questao-form.html?id=${
-              encodeURIComponent(questao.id)
-            }`;
+            `questao-form.html?id=${encodeURIComponent(questao.id)}`;
         });
 
         const excluir = document.createElement("button");
         excluir.className = "delete";
         excluir.textContent = "Excluir";
-
-        excluir.addEventListener("click", () => {
-          const confirmar = window.confirm(
-            "Deseja realmente excluir esta questão?"
-          );
-
-          if (!confirmar) return;
-
-          // Exclusão apenas local, para demonstração.
-          // Na integração, aguardar o DELETE da API
-          // antes de remover o item da tela.
-          const indice = questoes.findIndex(
-            item => item.id === questao.id
-          );
-
-          if (indice !== -1) {
-            questoes.splice(indice, 1);
-            renderizar();
-          }
-        });
+        excluir.addEventListener("click", () => excluirQuestao(questao, excluir));
 
         acoes.append(editar, excluir);
         card.append(conteudo, acoes);
@@ -433,17 +352,15 @@
       });
     }
 
-    pesquisa.addEventListener("input", renderizar);
-    tipo.addEventListener("change", renderizar);
-    tags.addEventListener("input", renderizar);
+    pesquisa.addEventListener("input", agendarCarga);
+    tipo.addEventListener("change", carregar);
+    tags.addEventListener("input", agendarCarga);
 
-    document
-      .getElementById("novaQuestao")
-      .addEventListener("click", () => {
-        window.location.href = "questao-form.html";
-      });
+    document.getElementById("novaQuestao").addEventListener("click", () => {
+      window.location.href = "questao-form.html";
+    });
 
-    renderizar();
+    carregar();
   </script>
 </body>
 </html>
