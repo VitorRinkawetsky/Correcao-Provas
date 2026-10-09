@@ -1,16 +1,18 @@
 <script setup>
-import { Copy, Pencil, RefreshCw, UserMinus, UserPlus, Users, X } from '@lucide/vue';
+import { Archive, Copy, Pencil, RefreshCw, UserMinus, UserPlus, Users, X } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
-import { RouterLink, useRoute } from 'vue-router';
+import { RouterLink, useRoute, useRouter } from 'vue-router';
 
-import { addStudentToClass, getClass, regenerateClassInviteCode, removeStudentFromClass } from '../services/classApi';
+import { addStudentToClass, archiveClass, getClass, regenerateClassInviteCode, removeStudentFromClass } from '../services/classApi';
 
 const route = useRoute();
+const router = useRouter();
 const classId = computed(() => route.params.id);
 const classItem = ref(null);
 const inviteCode = computed(() => classItem.value?.inviteCode || '');
 const isLoading = ref(true);
 const isBusy = ref(false);
+const isArchiving = ref(false);
 const errorMessage = ref('');
 const modalError = ref('');
 const needsStudentDetails = ref(false);
@@ -128,6 +130,24 @@ const removeStudent = async (student) => {
     }
     if (removed && id === classId.value) await loadClass();
 };
+
+const archiveCurrentClass = async () => {
+    if (isBusy.value || classItem.value?.status === 'archived'
+        || !window.confirm(`Arquivar a turma ${classItem.value.name}?`)) return;
+    const id = classId.value;
+    isBusy.value = true;
+    isArchiving.value = true;
+    errorMessage.value = '';
+    try {
+        await archiveClass(id);
+        if (id === classId.value) await router.push('/turmas');
+    } catch (error) {
+        if (id === classId.value) errorMessage.value = error.message;
+    } finally {
+        isArchiving.value = false;
+        isBusy.value = false;
+    }
+};
 </script>
 
 <template>
@@ -140,10 +160,17 @@ const removeStudent = async (student) => {
                 <p class="eyebrow">Turma</p>
                 <h1>{{ classItem.name }}</h1>
                 <p>{{ classItem.subject }}</p>
-                <RouterLink :to="`/turmas/${classItem.id}/editar`" class="button button--secondary">
-                    <Pencil :size="17" />
-                    Editar turma
-                </RouterLink>
+                <div class="class-actions" aria-label="Ações da turma">
+                    <RouterLink :to="`/turmas/${classItem.id}/editar`" class="button button--secondary">
+                        <Pencil :size="17" />
+                        Editar turma
+                    </RouterLink>
+                    <button class="button button--secondary" type="button" aria-label="Arquivar turma"
+                        :disabled="isBusy || classItem.status === 'archived'" @click="archiveCurrentClass">
+                        <Archive :size="17" />
+                        {{ isArchiving ? 'Arquivando...' : 'Arquivar turma' }}
+                    </button>
+                </div>
             </div>
 
             <dl class="class-summary">

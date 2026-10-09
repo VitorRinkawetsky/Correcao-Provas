@@ -3,18 +3,19 @@
 Implementacao restrita a turmas e aos registros academicos vinculados a elas.
 Usa o pool MySQL existente e as tabelas `classes`, `students`, `class_students`
 e `professors`. A consulta de notas le a view `v_student_grades` e filtra a
-aplicacao da turma. Nenhuma alteracao de schema ou nova dependencia e necessaria.
+aplicacao da turma. Nenhuma alteracao de schema ou dependencia de producao e necessaria.
 
 ## Contexto do professor
 
-A autenticacao ainda esta pendente no projeto. Este modulo aceita
+A autenticacao ainda esta pendente no projeto. Este modulo prioriza
 `request.session.teacherId`, a ser preenchido por middleware de autenticacao.
-Enquanto isso, em desenvolvimento, configure `DEFAULT_TEACHER_ID=1` no `.env`
-para usar o professor dos seeds. O professor deve existir e estar ativo.
-O identificador nunca e recebido do corpo ou dos headers do cliente.
+Enquanto isso, configure `DEFAULT_TEACHER_ID=1` no ambiente local e na
+demonstracao hospedada para usar o professor dos seeds. O professor deve existir
+e estar ativo. O identificador nunca e recebido do corpo ou dos headers do cliente.
 
-Com `NODE_ENV=production`, o fallback de desenvolvimento e desabilitado e as
-rotas retornam 401 ate existir uma sessao autenticada. Este modulo nao implementa login.
+O fallback tambem funciona com `NODE_ENV=production` para manter a demonstracao
+de professor unico utilizavel. Ele e temporario e deve ser removido quando o login
+e a sessao forem implementados.
 
 As credenciais do MySQL continuam sendo as variaveis `DB_*` existentes.
 O proxy do Vite encaminha somente `/api/classes` para `http://127.0.0.1:3000`;
@@ -33,7 +34,7 @@ ao alterar a porta do backend, ajuste esse destino.
 | POST | `/api/classes/:id/invite-code` | Gera e persiste um novo convite |
 | GET | `/api/classes/:id/students` | Lista vinculos ativos da turma |
 | POST | `/api/classes/:id/students` | Cadastra ou vincula aluno; 201 |
-| DELETE | `/api/classes/:id/students/:studentId` | Remove somente o vinculo; 204 |
+| DELETE | `/api/classes/:id/students/:studentId` | Torna o vinculo inativo e preserva o historico; 204 |
 | GET | `/api/classes/:id/students/:studentId/grades` | Notas confirmadas do aluno nesta turma |
 
 Criar e editar exigem `name` (ate 150 caracteres), `subject` (ate 120) e
@@ -46,8 +47,9 @@ existente. Para cadastrar um aluno novo, envie `fullName` e `registration`,
 com `email` opcional. A matricula e unica e o aluno nao possui credenciais.
 E-mail desconhecido sem os dados obrigatorios retorna 400 com codigo
 `STUDENT_DETAILS_REQUIRED`; o modal entao apresenta nome e matricula.
-Repetir o vinculo nao duplica a matricula na turma. Alunos inativos nao podem
-ser vinculados. Turmas arquivadas nao aceitam alteracoes de alunos ou convite.
+Repetir o vinculo nao duplica a matricula na turma e reativa um vinculo inativo.
+Alunos inativos nao podem ser vinculados. Turmas arquivadas nao aceitam
+alteracoes de alunos ou convite.
 
 ## Respostas e integridade
 
@@ -67,12 +69,13 @@ restricoes unicas do banco protegem matricula, e-mail e convite.
 `/turmas` consulta a listagem. `Nova turma` abre `/turmas/nova`; salvar cria no
 banco e navega aos detalhes. Selecionar uma turma abre `/turmas/:id`; a acao
 `Editar turma` abre `/turmas/:id/editar`, carrega os dados e salva via PUT.
-Regenerar convite e adicionar/remover alunos tambem persistem no MySQL.
+Regenerar convite, arquivar a turma e adicionar/remover alunos tambem persistem
+no MySQL. A remocao de aluno apenas inativa o vinculo em `class_students`.
 As demais telas continuam com seu comportamento anterior.
 
 O cliente HTTP esta em `src/client/services/classApi.js`. Exemplos de todas as
 requisicoes estao em `docs/turmas-api.http`. Substitua os IDs pelos retornados
 na criacao antes de usar as operacoes de escrita.
 
-Nao foram executados testes, build, servidor ou chamadas ao banco durante
-esta implementacao, conforme solicitado.
+Os testes automatizados cobrem o contexto temporario do professor em producao,
+o arquivamento pela interface e a inativacao do vinculo de aluno.

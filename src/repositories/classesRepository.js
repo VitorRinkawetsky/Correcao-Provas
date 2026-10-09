@@ -59,7 +59,8 @@ const enrollStudent = (classId, studentId, db) => db.execute(`INSERT INTO class_
     ON DUPLICATE KEY UPDATE status = 'active'`, [classId, studentId]);
 const removeStudent = async (classId, studentId, db) => {
     const [result] = await db.execute(
-        'DELETE FROM class_students WHERE class_id = ? AND student_id = ?', [classId, studentId]);
+        `UPDATE class_students SET status = 'inactive'
+            WHERE class_id = ? AND student_id = ? AND status = 'active'`, [classId, studentId]);
     return result.affectedRows;
 };
 const hasEnrollment = async (classId, studentId, db = pool) => {
