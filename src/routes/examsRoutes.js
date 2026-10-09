@@ -11,6 +11,7 @@ router.get('/', controller.list);
 router.post('/', controller.create);
 router.get('/:id', controller.details);
 router.put('/:id', controller.update);
+router.delete('/:id', controller.archive);
 router.use(handleApiError);
 
 module.exports = router;

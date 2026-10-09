@@ -93,6 +93,23 @@ const updateExam = (id, teacherId, data, db) => db.execute(`
     WHERE id = ? AND teacher_id = ?
 `, [data.title, data.description || null, id, teacherId]);
 
+const hasApplications = async (examId, db = pool) => {
+    const [rows] = await db.execute(`
+        SELECT 1
+        FROM applications
+        WHERE exam_id = ?
+        LIMIT 1
+    `, [examId]);
+
+    return rows.length > 0;
+};
+
+const archiveExam = (id, teacherId, db) => db.execute(`
+    UPDATE exams
+    SET status = 'archived'
+    WHERE id = ? AND teacher_id = ?
+`, [id, teacherId]);
+
 const replaceExamQuestions = async (examId, questions, db) => {
     await db.execute('DELETE FROM exam_questions WHERE exam_id = ?', [examId]);
 
@@ -127,6 +144,8 @@ module.exports = {
     listExamQuestions,
     insertExam,
     updateExam,
+    hasApplications,
+    archiveExam,
     replaceExamQuestions,
     listOwnedQuestionIds
 };

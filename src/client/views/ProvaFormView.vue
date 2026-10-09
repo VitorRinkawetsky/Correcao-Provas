@@ -48,10 +48,12 @@ const filteredAvailableQuestions = computed(() => {
 });
 
 const totalScore = computed(() => formQuestions.value.reduce((total, item) => total + (Number(item.score) || 0), 0));
+const maxQuestionsReached = computed(() => formQuestions.value.length >= 20);
 
 const questionOptionLabel = (question) => `${getQuestionShortLabel(question)} — ${question.statement}`;
 
 const togglePicker = () => {
+    if (maxQuestionsReached.value) return;
     pickerOpen.value = !pickerOpen.value;
     searchTerm.value = '';
     selectedIds.clear();
@@ -67,6 +69,7 @@ const toggleSelected = (questionId) => {
 
 const addSelectedQuestions = () => {
     selectedIds.forEach((questionId) => {
+        if (formQuestions.value.length >= 20) return;
         const question = questionById(questionId);
         if (question) formQuestions.value.push({ questionId: question.id, score: question.maxScore || 1 });
     });
@@ -116,6 +119,10 @@ onMounted(async () => {
 const handleSubmit = async () => {
     if (!title.value.trim()) {
         titleError.value = true;
+        return;
+    }
+    if (formQuestions.value.length > 20) {
+        submitError.value = 'A prova pode possuir no maximo 20 questoes.';
         return;
     }
     titleError.value = false;
@@ -231,11 +238,19 @@ const cancelHref = computed(() => (isEditMode.value ? `/provas/${examId.value}` 
                     </li>
                 </ul>
 
-                <button class="button button--secondary" type="button" @click="togglePicker">
+                <button
+                    class="button button--secondary"
+                    type="button"
+                    :disabled="maxQuestionsReached"
+                    @click="togglePicker"
+                >
                     <X v-if="pickerOpen" :size="17" />
                     <Plus v-else :size="17" />
                     {{ pickerOpen ? 'Fechar' : 'Adicionar questão' }}
                 </button>
+                <p v-if="maxQuestionsReached" class="form-error">
+                    O limite de 20 questoes foi atingido.
+                </p>
 
                 <div v-if="pickerOpen" class="question-picker-panel">
                     <p class="form-label">Adicionar questões</p>

@@ -18,6 +18,10 @@ module.exports = {
         response,
         await examsService.update(request.params.id, request.teacher.id, request.body)
     ),
+    archive: async (request, response) => {
+        await examsService.archive(request.params.id, request.teacher.id);
+        return response.status(204).send();
+    },
     questions: async (request, response) => success(
         response,
         await questionsRepository.listQuestions(request.teacher.id)

@@ -1,16 +1,34 @@
 <script setup>
 import { Archive, ArrowLeft, Edit3, FilePlus2, FileText, ListChecks } from '@lucide/vue';
 import { onMounted, ref } from 'vue';
-import { RouterLink, useRoute } from 'vue-router';
+import { RouterLink, useRoute, useRouter } from 'vue-router';
 
 import StatusBadge from '../components/ui/StatusBadge.vue';
 import { formatScore } from '../data/mockData';
-import { getExamDetails } from '../services/examApi';
+import { archiveExam, getExamDetails } from '../services/examApi';
 
 const route = useRoute();
+const router = useRouter();
 const exam = ref(null);
 const loading = ref(true);
 const errorMessage = ref('');
+const actionError = ref('');
+const archiving = ref(false);
+
+const handleArchive = async () => {
+    if (!window.confirm('Arquivar esta prova? O historico das aplicacoes sera preservado.')) return;
+
+    actionError.value = '';
+    archiving.value = true;
+    try {
+        await archiveExam(exam.value.id);
+        await router.push('/');
+    } catch (error) {
+        actionError.value = error.message;
+    } finally {
+        archiving.value = false;
+    }
+};
 
 onMounted(async () => {
     try {
@@ -61,7 +79,11 @@ onMounted(async () => {
             </div>
 
             <div class="exam-actions" aria-label="Ações da prova">
-                <RouterLink :to="`/provas/${exam.id}/editar`" class="button button--secondary">
+                <RouterLink
+                    v-if="!['closed', 'archived'].includes(exam.status)"
+                    :to="`/provas/${exam.id}/editar`"
+                    class="button button--secondary"
+                >
                     <Edit3 :size="17" />
                     Editar
                 </RouterLink>
@@ -69,11 +91,18 @@ onMounted(async () => {
                     <FilePlus2 :size="17" />
                     Criar aplicação
                 </button>
-                <button class="button button--secondary" type="button">
+                <button
+                    v-if="exam.status !== 'archived'"
+                    class="button button--secondary"
+                    type="button"
+                    :disabled="archiving"
+                    @click="handleArchive"
+                >
                     <Archive :size="17" />
-                    Arquivar
+                    {{ archiving ? 'Arquivando...' : 'Arquivar' }}
                 </button>
             </div>
+            <p v-if="actionError" class="form-error">{{ actionError }}</p>
 
             <dl class="exam-summary">
                 <div>

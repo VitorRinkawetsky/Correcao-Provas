@@ -2,6 +2,8 @@ const { pool } = require('../config/database');
 const repository = require('../repositories/examsRepository');
 const { ApiError } = require('../http/ApiError');
 
+const MAX_QUESTIONS = 20;
+
 const positiveId = (value, field = 'id') => {
     if (!/^\d+$/.test(String(value)) || !Number.isSafeInteger(Number(value)) || Number(value) < 1) {
         throw new ApiError(400, 'VALIDATION_ERROR', 'Identificador invalido', [{ field }]);
@@ -17,6 +19,12 @@ const validatePayload = async (body, teacherId, db) => {
     const details = [];
     if (!title || title.length > 180) {
         details.push({ field: 'title', message: 'Informe um titulo com ate 180 caracteres' });
+    }
+    if (questions.length > MAX_QUESTIONS) {
+        details.push({
+            field: 'questions',
+            message: `A prova pode possuir no maximo ${MAX_QUESTIONS} questoes`
+        });
     }
 
     const normalizedQuestions = questions.map((question, index) => ({
@@ -106,6 +114,20 @@ const update = (id, teacherId, body) => transaction(async (db) => {
     const examId = positiveId(id);
     const current = await repository.findExam(examId, teacherId, db, true);
     if (!current) throw new ApiError(404, 'NOT_FOUND', 'Prova nao encontrada');
+    if (current.status === 'closed' || current.status === 'archived') {
+        throw new ApiError(
+            409,
+            'EXAM_LOCKED',
+            'Provas fechadas ou arquivadas nao podem ser editadas'
+        );
+    }
+    if (await repository.hasApplications(examId, db)) {
+        throw new ApiError(
+            409,
+            'EXAM_LOCKED',
+            'Provas que ja possuem aplicacoes nao podem ser editadas'
+        );
+    }
 
     const data = await validatePayload(body, teacherId, db);
     await repository.updateExam(examId, teacherId, data, db);
@@ -114,9 +136,18 @@ const update = (id, teacherId, body) => transaction(async (db) => {
     return buildDetails(exam, db);
 });
 
+const archive = (id, teacherId) => transaction(async (db) => {
+    const examId = positiveId(id);
+    const current = await repository.findExam(examId, teacherId, db, true);
+    if (!current) throw new ApiError(404, 'NOT_FOUND', 'Prova nao encontrada');
+
+    await repository.archiveExam(examId, teacherId, db);
+});
+
 module.exports = {
     list,
     details,
     create,
-    update
+    update,
+    archive
 };

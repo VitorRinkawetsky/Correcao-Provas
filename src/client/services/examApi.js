@@ -13,3 +13,7 @@ export const updateExam = (id, payload) => requestJson(`/api/exams/${id}`, {
     method: 'PUT',
     body: JSON.stringify(payload)
 });
+
+export const archiveExam = (id) => requestJson(`/api/exams/${id}`, {
+    method: 'DELETE'
+});
