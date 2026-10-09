@@ -6,6 +6,9 @@ const {
     checkDatabaseConnection
 } = require('./config/database');
 
+const classesRoutes = require('./routes/classesRoutes');
+const { handleApiError } = require('./http/ApiError');
+
 const app = express();
 
 app.use(express.json());
@@ -455,6 +458,9 @@ app.put('/api/questions/:id', async (request, response) => {
     }
 });
 
+// Rotas de turmas
+app.use('/api/classes', classesRoutes);
+
 /*
 |--------------------------------------------------------------------------
 | EXCLUIR QUESTÃO
@@ -496,26 +502,17 @@ app.delete('/api/questions/:id', async (request, response) => {
         }
 
         await connection.execute(
-            `
-            DELETE FROM question_tags
-            WHERE question_id = ?
-            `,
+            'DELETE FROM question_tags WHERE question_id = ?',
             [questionId]
         );
 
         await connection.execute(
-            `
-            DELETE FROM alternatives
-            WHERE question_id = ?
-            `,
+            'DELETE FROM alternatives WHERE question_id = ?',
             [questionId]
         );
 
         await connection.execute(
-            `
-            DELETE FROM questions
-            WHERE id = ?
-            `,
+            'DELETE FROM questions WHERE id = ?',
             [questionId]
         );
 
@@ -528,10 +525,7 @@ app.delete('/api/questions/:id', async (request, response) => {
     } catch (error) {
         await connection.rollback();
 
-        console.error(
-            'Falha ao excluir questão:',
-            error.message
-        );
+        console.error('Falha ao excluir questão:', error.message);
 
         response.status(500).json({
             status: 'error',
@@ -547,6 +541,11 @@ app.delete('/api/questions/:id', async (request, response) => {
 | API 404
 |--------------------------------------------------------------------------
 */
+
+// Mantenha aqui o middleware de 404 já existente.
+
+// Tratamento de erros (após as rotas e o 404)
+app.use('/api/classes', handleApiError);
 
 app.use('/api', (_request, response) => {
     response.status(404).json({
