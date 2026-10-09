@@ -1,14 +1,28 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-import { corrections, exams, examVersions, questions } from './mockData';
-import { normalizeTags, useQuestionStore, validateQuestionInput } from './questionStore';
+import {
+    corrections,
+    exams,
+    examVersions,
+    questions
+} from './mockData';
+
+import {
+    normalizeTags,
+    useQuestionStore,
+    validateQuestionInput
+} from './questionStore';
 
 const validQuestion = {
     statement: 'O que é normalização?',
     tags: ['Banco de Dados'],
     alternatives: [
-        { text: 'Organização de dados para reduzir redundâncias.' },
-        { text: 'Cópia integral de todas as tabelas.' }
+        {
+            text: 'Organização de dados para reduzir redundâncias.'
+        },
+        {
+            text: 'Cópia integral de todas as tabelas.'
+        }
     ],
     correctAlternativeIndex: 0
 };
@@ -19,35 +33,80 @@ describe('contrato das questões objetivas', () => {
             expect(question.type).toBe('objetiva');
             expect(question.alternatives.length).toBeGreaterThanOrEqual(2);
             expect(question.alternatives.length).toBeLessThanOrEqual(5);
-            expect(question.alternatives.some(
-                (alternative) => alternative.id === question.correctAlternativeId
-            )).toBe(true);
+
+            expect(
+                question.alternatives.some(
+                    (alternative) =>
+                        alternative.id === question.correctAlternativeId
+                )
+            ).toBe(true);
         });
     });
 
     it('não deixa provas, versões ou correções apontarem para questões removidas', () => {
-        const questionIds = new Set(questions.map((question) => question.id));
+        const questionIds = new Set(
+            questions.map((question) => question.id)
+        );
 
-        exams.flatMap((exam) => exam.questions).forEach(({ questionId }) => {
-            expect(questionIds.has(questionId)).toBe(true);
-        });
-        examVersions.flatMap((version) => version.layout.questionOrder).forEach((questionId) => {
-            expect(questionIds.has(questionId)).toBe(true);
-        });
-        examVersions.flatMap((version) => version.layout.alternativeOrder).forEach((alternativeOrder) => {
-            const question = questions.find((item) => item.id === alternativeOrder.questionId);
-            expect(question).toBeTruthy();
-            expect([...alternativeOrder.printedOrder].sort((a, b) => a - b)).toEqual(
-                question.alternatives.map((alternative) => alternative.id).sort((a, b) => a - b)
-            );
-        });
-        corrections.flatMap((correction) => correction.objectiveResults).forEach(({ questionId }) => {
-            expect(questionIds.has(questionId)).toBe(true);
-        });
+        exams
+            .flatMap((exam) => exam.questions)
+            .forEach(({ questionId }) => {
+                expect(questionIds.has(questionId)).toBe(true);
+            });
+
+        examVersions
+            .flatMap(
+                (version) => version.layout.questionOrder
+            )
+            .forEach((questionId) => {
+                expect(questionIds.has(questionId)).toBe(true);
+            });
+
+        examVersions
+            .flatMap(
+                (version) => version.layout.alternativeOrder
+            )
+            .forEach((alternativeOrder) => {
+                const question = questions.find(
+                    (item) =>
+                        item.id === alternativeOrder.questionId
+                );
+
+                expect(question).toBeTruthy();
+
+                expect(
+                    [...alternativeOrder.printedOrder].sort(
+                        (a, b) => a - b
+                    )
+                ).toEqual(
+                    question.alternatives
+                        .map(
+                            (alternative) =>
+                                alternative.id
+                        )
+                        .sort((a, b) => a - b)
+                );
+            });
+
+        corrections
+            .flatMap(
+                (correction) => correction.objectiveResults
+            )
+            .forEach(({ questionId }) => {
+                expect(questionIds.has(questionId)).toBe(true);
+            });
+
         corrections.forEach((correction) => {
-            expect(correction).not.toHaveProperty('discursiveScores');
+            expect(correction).not.toHaveProperty(
+                'discursiveScores'
+            );
+
             expect(correction.totalScore).toBe(
-                correction.objectiveResults.reduce((total, result) => total + result.score, 0)
+                correction.objectiveResults.reduce(
+                    (total, result) =>
+                        total + result.score,
+                    0
+                )
             );
         });
     });
@@ -55,26 +114,52 @@ describe('contrato das questões objetivas', () => {
 
 describe('validação do formulário de questão', () => {
     it('aceita uma questão objetiva válida', () => {
-        expect(validateQuestionInput(validQuestion)).toEqual({ valid: true, errors: {} });
+        expect(
+            validateQuestionInput(validQuestion)
+        ).toEqual({
+            valid: true,
+            errors: {}
+        });
     });
 
     it('exige de 2 a 5 alternativas preenchidas', () => {
         const tooFew = validateQuestionInput({
             ...validQuestion,
-            alternatives: [{ text: 'Única alternativa' }]
-        });
-        const tooMany = validateQuestionInput({
-            ...validQuestion,
-            alternatives: Array.from({ length: 6 }, (_, index) => ({ text: `Alternativa ${index + 1}` }))
-        });
-        const blankAlternative = validateQuestionInput({
-            ...validQuestion,
-            alternatives: [{ text: 'Preenchida' }, { text: ' ' }]
+            alternatives: [
+                { text: 'Única alternativa' }
+            ]
         });
 
-        expect(tooFew.errors.alternatives).toBeTruthy();
-        expect(tooMany.errors.alternatives).toBeTruthy();
-        expect(blankAlternative.errors.alternatives).toBeTruthy();
+        const tooMany = validateQuestionInput({
+            ...validQuestion,
+            alternatives: Array.from(
+                { length: 6 },
+                (_, index) => ({
+                    text: `Alternativa ${index + 1}`
+                })
+            )
+        });
+
+        const blankAlternative =
+            validateQuestionInput({
+                ...validQuestion,
+                alternatives: [
+                    { text: 'Preenchida' },
+                    { text: ' ' }
+                ]
+            });
+
+        expect(
+            tooFew.errors.alternatives
+        ).toBeTruthy();
+
+        expect(
+            tooMany.errors.alternatives
+        ).toBeTruthy();
+
+        expect(
+            blankAlternative.errors.alternatives
+        ).toBeTruthy();
     });
 
     it('exige exatamente uma alternativa correta', () => {
@@ -83,28 +168,51 @@ describe('validação do formulário de questão', () => {
             correctAlternativeIndex: -1
         });
 
-        expect(result.errors.correctAlternativeId).toBeTruthy();
+        expect(
+            result.errors.correctAlternativeId
+        ).toBeTruthy();
     });
 
     it('normaliza e remove tags duplicadas', () => {
-        expect(normalizeTags('Banco de Dados, SQL, sql,  ')).toEqual(['Banco de Dados', 'SQL']);
+        expect(
+            normalizeTags(
+                'Banco de Dados, SQL, sql,  '
+            )
+        ).toEqual([
+            'Banco de Dados',
+            'SQL'
+        ]);
     });
 
-    it('cria, edita e exclui uma questão no repositório local', () => {
-        const { questions: storedQuestions, getQuestion, saveQuestion, deleteQuestion } = useQuestionStore();
-        const initialCount = storedQuestions.value.length;
-        const createdQuestion = saveQuestion(validQuestion);
+    it('salva uma questão usando a API', async () => {
+        const { saveQuestion } =
+            useQuestionStore();
 
-        expect(storedQuestions.value).toHaveLength(initialCount + 1);
-        expect(getQuestion(createdQuestion.id)?.statement).toBe(validQuestion.statement);
+        const mockResponse = {
+            ok: true,
+            json: async () => ({
+                status: 'created',
+                id: 999
+            })
+        };
 
-        saveQuestion({
-            ...validQuestion,
-            statement: 'O que é normalização de dados?'
-        }, createdQuestion.id);
-        expect(getQuestion(createdQuestion.id)?.statement).toBe('O que é normalização de dados?');
+        const fetchMock = vi
+            .spyOn(globalThis, 'fetch')
+            .mockResolvedValue(mockResponse);
 
-        expect(deleteQuestion(createdQuestion.id)).toBe(true);
-        expect(storedQuestions.value).toHaveLength(initialCount);
+        await saveQuestion(validQuestion);
+
+        expect(fetchMock).toHaveBeenCalledWith(
+            '/api/questions',
+            expect.objectContaining({
+                method: 'POST',
+                headers: {
+                    'Content-Type':
+                        'application/json'
+                }
+            })
+        );
+
+        fetchMock.mockRestore();
     });
 });

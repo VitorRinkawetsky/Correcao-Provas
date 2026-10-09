@@ -1,6 +1,6 @@
 <script setup>
 import { BookOpenCheck, Edit3, Plus, Search, Trash2 } from '@lucide/vue';
-import { computed, ref } from 'vue';
+import { computed, ref, onMounted } from 'vue';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
 
 import { useQuestionStore } from '../data/questionStore';
@@ -9,7 +9,11 @@ const route = useRoute();
 const router = useRouter();
 const search = ref('');
 const selectedTag = ref('');
-const { questions, deleteQuestion } = useQuestionStore();
+const { questions, getQuestion, deleteQuestion, loadQuestions } = useQuestionStore();
+
+onMounted(() => {
+    loadQuestions();
+});
 
 const availableTags = computed(() => [...new Set(
     questions.value.flatMap((question) => question.tags)
