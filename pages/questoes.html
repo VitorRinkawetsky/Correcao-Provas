@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Banco de Questões | SGP Católica</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 32px;
+      font-family: Arial, sans-serif;
+      background: #f5f7fb;
+      color: #1f2937;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 28px;
+      color: #12345a;
+    }
+
+    .subtitle {
+      margin-top: 8px;
+      color: #64748b;
+      font-size: 14px;
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+      border-radius: 7px;
+      padding: 10px 15px;
+      border: 1px solid transparent;
+    }
+
+    .primary {
+      background: #155eef;
+      color: white;
+      font-weight: 600;
+    }
+
+    .primary:hover {
+      background: #104bc4;
+    }
+
+    .filters {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr;
+      gap: 16px;
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 22px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #475569;
+    }
+
+    input,
+    select {
+      width: 100%;
+      min-width: 0;
+      padding: 11px 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 7px;
+      background: white;
+      color: #1f2937;
+      outline: none;
+    }
+
+    input:focus,
+    select:focus {
+      border-color: #155eef;
+      box-shadow: 0 0 0 3px #155eef20;
+    }
+
+    .list-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 24px 0 12px;
+      gap: 12px;
+    }
+
+    .list-header h2 {
+      font-size: 17px;
+      margin: 0;
+    }
+
+    .count {
+      color: #64748b;
+      font-size: 13px;
+    }
+
+    .question-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 22px;
+      margin-bottom: 12px;
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+    }
+
+    .question-content {
+      min-width: 0;
+    }
+
+    .question-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin: 0 0 12px;
+    }
+
+    .metadata {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 5px 9px;
+      border-radius: 5px;
+      background: #eff6ff;
+      color: #1d4ed8;
+      font-size: 12px;
+    }
+
+    .tag {
+      background: #f1f5f9;
+      color: #475569;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .edit {
+      background: white;
+      border-color: #cbd5e1;
+      color: #334155;
+    }
+
+    .delete {
+      background: white;
+      border-color: #fecaca;
+      color: #b91c1c;
+    }
+
+    .empty {
+      padding: 36px 20px;
+      text-align: center;
+      background: white;
+      border: 1px dashed #cbd5e1;
+      border-radius: 10px;
+      color: #64748b;
+    }
+
+    @media (max-width: 750px) {
+      body {
+        padding: 20px 14px;
+      }
+
+      .header {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .filters {
+        grid-template-columns: 1fr;
+      }
+
+      .question-card {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .actions {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="container">
+    <header class="header">
+      <div>
+        <h1>Banco de questões</h1>
+        <p class="subtitle">
+          Consulte, pesquise e gerencie suas questões.
+        </p>
+      </div>
+
+      <button class="primary" id="novaQuestao">
+        + Nova questão
+      </button>
+    </header>
+
+    <section class="filters" aria-label="Filtros de questões">
+      <div class="field">
+        <label for="pesquisa">Pesquisar por texto</label>
+        <input
+          id="pesquisa"
+          type="search"
+          placeholder="Digite parte do enunciado..."
+        >
+      </div>
+
+      <div class="field">
+        <label for="tipo">Tipo</label>
+        <select id="tipo">
+          <option value="">Todos</option>
+          <option value="Objetiva">Objetiva</option>
+          <option value="Discursiva">Discursiva</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="tags">Tags</label>
+        <input
+          id="tags"
+          type="text"
+          placeholder="Ex.: Banco de Dados"
+        >
+      </div>
+    </section>
+
+    <div class="list-header">
+      <h2>Questões cadastradas</h2>
+      <span class="count" id="contador"></span>
+    </div>
+
+    <section id="lista" aria-live="polite"></section>
+  </main>
+
+  <script>
+    // Dados demonstrativos.
+    // Substituir pela integração com a API do projeto.
+    const questoes = [
+      {
+        id: 1,
+        enunciado: "O que é normalização?",
+        tipo: "Objetiva",
+        tags: ["Banco de Dados"]
+      },
+      {
+        id: 2,
+        enunciado: "Qual é a função de uma chave primária?",
+        tipo: "Objetiva",
+        tags: ["Banco de Dados", "SQL"]
+      },
+      {
+        id: 3,
+        enunciado: "Explique o conceito de encapsulamento.",
+        tipo: "Discursiva",
+        tags: ["Programação", "POO"]
+      }
+    ];
+
+    const pesquisa = document.getElementById("pesquisa");
+    const tipo = document.getElementById("tipo");
+    const tags = document.getElementById("tags");
+    const lista = document.getElementById("lista");
+    const contador = document.getElementById("contador");
+
+    function renderizar() {
+      const texto = pesquisa.value
+        .trim()
+        .toLocaleLowerCase("pt-BR");
+
+      const tipoSelecionado = tipo.value;
+
+      const tagsDigitadas = tags.value
+        .split(",")
+        .map(tag => tag.trim().toLocaleLowerCase("pt-BR"))
+        .filter(Boolean);
+
+      const filtradas = questoes.filter(questao => {
+        const correspondeTexto =
+          questao.enunciado
+            .toLocaleLowerCase("pt-BR")
+            .includes(texto);
+
+        const correspondeTipo =
+          !tipoSelecionado ||
+          questao.tipo === tipoSelecionado;
+
+        const tagsQuestao = questao.tags.map(tag =>
+          tag.toLocaleLowerCase("pt-BR")
+        );
+
+        const correspondeTags = tagsDigitadas.every(tag =>
+          tagsQuestao.some(tagQuestao =>
+            tagQuestao.includes(tag)
+          )
+        );
+
+        return (
+          correspondeTexto &&
+          correspondeTipo &&
+          correspondeTags
+        );
+      });
+
+      contador.textContent =
+        `${filtradas.length} ${
+          filtradas.length === 1 ? "questão" : "questões"
+        }`;
+
+      lista.replaceChildren();
+
+      if (filtradas.length === 0) {
+        const vazio = document.createElement("div");
+        vazio.className = "empty";
+        vazio.textContent =
+          "Nenhuma questão encontrada para os filtros informados.";
+
+        lista.appendChild(vazio);
+        return;
+      }
+
+      filtradas.forEach(questao => {
+        const card = document.createElement("article");
+        card.className = "question-card";
+
+        const conteudo = document.createElement("div");
+        conteudo.className = "question-content";
+
+        const titulo = document.createElement("h3");
+        titulo.className = "question-title";
+        titulo.textContent = questao.enunciado;
+
+        const metadata = document.createElement("div");
+        metadata.className = "metadata";
+
+        const tipoBadge = document.createElement("span");
+        tipoBadge.className = "badge";
+        tipoBadge.textContent = questao.tipo;
+
+        metadata.appendChild(tipoBadge);
+
+        questao.tags.forEach(tag => {
+          const tagBadge = document.createElement("span");
+          tagBadge.className = "badge tag";
+          tagBadge.textContent = tag;
+
+          metadata.appendChild(tagBadge);
+        });
+
+        conteudo.append(titulo, metadata);
+
+        const acoes = document.createElement("div");
+        acoes.className = "actions";
+
+        const editar = document.createElement("button");
+        editar.className = "edit";
+        editar.textContent = "Editar";
+
+        editar.addEventListener("click", () => {
+          window.location.href =
+            `questao-form.html?id=${
+              encodeURIComponent(questao.id)
+            }`;
+        });
+
+        const excluir = document.createElement("button");
+        excluir.className = "delete";
+        excluir.textContent = "Excluir";
+
+        excluir.addEventListener("click", () => {
+          const confirmar = window.confirm(
+            "Deseja realmente excluir esta questão?"
+          );
+
+          if (!confirmar) return;
+
+          // Exclusão apenas local, para demonstração.
+          // Na integração, aguardar o DELETE da API
+          // antes de remover o item da tela.
+          const indice = questoes.findIndex(
+            item => item.id === questao.id
+          );
+
+          if (indice !== -1) {
+            questoes.splice(indice, 1);
+            renderizar();
+          }
+        });
+
+        acoes.append(editar, excluir);
+        card.append(conteudo, acoes);
+        lista.appendChild(card);
+      });
+    }
+
+    pesquisa.addEventListener("input", renderizar);
+    tipo.addEventListener("change", renderizar);
+    tags.addEventListener("input", renderizar);
+
+    document
+      .getElementById("novaQuestao")
+      .addEventListener("click", () => {
+        window.location.href = "questao-form.html";
+      });
+
+    renderizar();
+  </script>
+</body>
+</html>
