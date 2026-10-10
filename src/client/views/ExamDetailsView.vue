@@ -22,7 +22,7 @@ const handleArchive = async () => {
     archiving.value = true;
     try {
         await archiveExam(exam.value.id);
-        await router.push('/');
+        await router.push('/provas');
     } catch (error) {
         actionError.value = error.message;
     } finally {

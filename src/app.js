@@ -6,6 +6,7 @@ const {
     checkDatabaseConnection
 } = require('./config/database');
 const examsRoutes = require('./routes/examsRoutes');
+const teacherContext = require('./middlewares/teacherContext');
 const { handleApiError } = require('./http/ApiError');
 
 const app = express();
@@ -47,7 +48,7 @@ app.use('/api/exams', examsRoutes);
 |--------------------------------------------------------------------------
 */
 
-app.get('/api/questions', async (_request, response) => {
+app.get('/api/questions', teacherContext, async (request, response) => {
     try {
         const [questions] = await pool.execute(`
             SELECT
@@ -58,8 +59,9 @@ app.get('/api/questions', async (_request, response) => {
                 q.created_at AS createdAt,
                 q.updated_at AS updatedAt
             FROM questions q
+            WHERE q.teacher_id = ?
             ORDER BY q.id ASC
-        `);
+        `, [request.teacher.id]);
 
         const [alternatives] = await pool.execute(`
             SELECT
@@ -125,13 +127,12 @@ app.get('/api/questions', async (_request, response) => {
 |--------------------------------------------------------------------------
 */
 
-app.post('/api/questions', async (request, response) => {
+app.post('/api/questions', teacherContext, async (request, response) => {
     const connection = await pool.getConnection();
 
     try {
         const {
             statement,
-            teacherId = 1,
             tags = [],
             alternatives = [],
             correctAlternativeIndex
@@ -174,7 +175,7 @@ app.post('/api/questions', async (request, response) => {
             VALUES (?, ?, 'active')
             `,
             [
-                teacherId,
+                request.teacher.id,
                 String(statement).trim()
             ]
         );
@@ -274,7 +275,7 @@ app.post('/api/questions', async (request, response) => {
 |--------------------------------------------------------------------------
 */
 
-app.put('/api/questions/:id', async (request, response) => {
+app.put('/api/questions/:id', teacherContext, async (request, response) => {
     const connection = await pool.getConnection();
 
     try {
@@ -289,7 +290,6 @@ app.put('/api/questions/:id', async (request, response) => {
 
         const {
             statement,
-            teacherId = 1,
             tags = [],
             alternatives = [],
             correctAlternativeIndex
@@ -326,10 +326,10 @@ app.put('/api/questions/:id', async (request, response) => {
             `
             SELECT id
             FROM questions
-            WHERE id = ?
+            WHERE id = ? AND teacher_id = ?
             FOR UPDATE
             `,
-            [questionId]
+            [questionId, request.teacher.id]
         );
 
         if (questionRows.length === 0) {
@@ -345,14 +345,13 @@ app.put('/api/questions/:id', async (request, response) => {
             `
             UPDATE questions
             SET
-                teacher_id = ?,
                 statement = ?
-            WHERE id = ?
+            WHERE id = ? AND teacher_id = ?
             `,
             [
-                teacherId,
                 String(statement).trim(),
-                questionId
+                questionId,
+                request.teacher.id
             ]
         );
 
@@ -465,7 +464,7 @@ app.put('/api/questions/:id', async (request, response) => {
 |--------------------------------------------------------------------------
 */
 
-app.delete('/api/questions/:id', async (request, response) => {
+app.delete('/api/questions/:id', teacherContext, async (request, response) => {
     const connection = await pool.getConnection();
 
     try {
@@ -484,10 +483,10 @@ app.delete('/api/questions/:id', async (request, response) => {
             `
             SELECT id
             FROM questions
-            WHERE id = ?
+            WHERE id = ? AND teacher_id = ?
             FOR UPDATE
             `,
-            [questionId]
+            [questionId, request.teacher.id]
         );
 
         if (questionRows.length === 0) {
@@ -518,9 +517,9 @@ app.delete('/api/questions/:id', async (request, response) => {
         await connection.execute(
             `
             DELETE FROM questions
-            WHERE id = ?
+            WHERE id = ? AND teacher_id = ?
             `,
-            [questionId]
+            [questionId, request.teacher.id]
         );
 
         await connection.commit();
