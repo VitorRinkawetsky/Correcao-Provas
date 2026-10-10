@@ -9,6 +9,8 @@ const examsRoutes = require('./routes/examsRoutes');
 const teacherContext = require('./middlewares/teacherContext');
 const { handleApiError } = require('./http/ApiError');
 
+const classesRoutes = require('./routes/classesRoutes');
+
 const app = express();
 
 app.use(express.json());
@@ -458,6 +460,9 @@ app.put('/api/questions/:id', teacherContext, async (request, response) => {
     }
 });
 
+// Rotas de turmas
+app.use('/api/classes', classesRoutes);
+
 /*
 |--------------------------------------------------------------------------
 | EXCLUIR QUESTÃO
@@ -499,18 +504,12 @@ app.delete('/api/questions/:id', teacherContext, async (request, response) => {
         }
 
         await connection.execute(
-            `
-            DELETE FROM question_tags
-            WHERE question_id = ?
-            `,
+            'DELETE FROM question_tags WHERE question_id = ?',
             [questionId]
         );
 
         await connection.execute(
-            `
-            DELETE FROM alternatives
-            WHERE question_id = ?
-            `,
+            'DELETE FROM alternatives WHERE question_id = ?',
             [questionId]
         );
 
@@ -531,10 +530,7 @@ app.delete('/api/questions/:id', teacherContext, async (request, response) => {
     } catch (error) {
         await connection.rollback();
 
-        console.error(
-            'Falha ao excluir questão:',
-            error.message
-        );
+        console.error('Falha ao excluir questão:', error.message);
 
         response.status(500).json({
             status: 'error',
