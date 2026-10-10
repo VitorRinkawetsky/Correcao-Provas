@@ -1,11 +1,24 @@
 <script setup>
 import { ArrowRight, Plus } from '@lucide/vue';
+import { onMounted, ref } from 'vue';
 import { RouterLink } from 'vue-router';
 
 import StatusBadge from '../components/ui/StatusBadge.vue';
-import { getAllExams } from '../data/mockData';
+import { listExams } from '../services/examApi';
 
-const exams = getAllExams();
+const exams = ref([]);
+const loading = ref(true);
+const errorMessage = ref('');
+
+onMounted(async () => {
+    try {
+        exams.value = await listExams();
+    } catch (error) {
+        errorMessage.value = error.message;
+    } finally {
+        loading.value = false;
+    }
+});
 </script>
 
 <template>
@@ -21,7 +34,10 @@ const exams = getAllExams();
             </RouterLink>
         </header>
 
-        <ul class="exam-list">
+        <p v-if="loading" class="empty-state">Carregando provas...</p>
+        <p v-else-if="errorMessage" class="empty-state">{{ errorMessage }}</p>
+
+        <ul v-else class="exam-list">
             <li v-for="exam in exams" :key="exam.id" class="exam-list-card">
                 <div class="exam-list-card__content">
                     <strong>{{ exam.title }}</strong>

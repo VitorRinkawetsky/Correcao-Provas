@@ -227,6 +227,13 @@ Em Linux ou macOS:
 cp .env.example .env
 ```
 
+Suba o banco local e inicie a API em outro terminal:
+
+```bash
+npm run db:up
+npm run dev:server
+```
+
 Depois, inicie o Vite:
 
 ```bash
@@ -250,7 +257,12 @@ npm start
 
 Abra [http://localhost:3000/api/health](http://localhost:3000/api/health).
 
-> O banco e a conexão estão funcionais, mas as telas ainda usam os dados simulados enquanto os CRUDs REST são implementados. Consulte [a análise da integração da N2](docs/n2-banco-dados.md).
+O Vite encaminha as chamadas `/api` para o Express em [http://localhost:3000](http://localhost:3000). As telas de listagem, detalhes e formulario de provas usam a API para consultar e salvar os dados no MySQL. As outras telas continuam com dados simulados enquanto seus CRUDs REST sao implementados. Consulte [a análise da integração da N2](docs/n2-banco-dados.md).
+
+A API de provas usa a identidade autenticada pelo servidor. Enquanto a
+autenticacao ainda nao estiver habilitada no ambiente local, o servidor usa o
+professor de desenvolvimento configurado em `TEACHER_ID` (ou `1` por padrao);
+o cabecalho `x-teacher-id` e ignorado.
 
 ### Testes
 

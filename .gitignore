@@ -143,3 +143,6 @@ vite.config.ts.timestamp-*
 .vite/
 
 .vscode/
+
+# Personal academic diary
+Diario-Individual-Weliton-Rodrigues.*

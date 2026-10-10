@@ -159,7 +159,7 @@ CREATE TABLE exams (
     teacher_id BIGINT UNSIGNED NOT NULL,
     title VARCHAR(180) NOT NULL,
     description TEXT NULL,
-    status ENUM('draft', 'ready', 'closed') NOT NULL DEFAULT 'draft',
+    status ENUM('draft', 'ready', 'closed', 'archived') NOT NULL DEFAULT 'draft',
     created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
         ON UPDATE CURRENT_TIMESTAMP(3),

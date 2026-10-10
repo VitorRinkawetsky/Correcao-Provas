@@ -1,6 +1,7 @@
 class ApiError extends Error {
     constructor(status, code, message, details = []) {
         super(message);
+        this.name = 'ApiError';
         this.status = status;
         this.code = code;
         this.details = details;
@@ -23,7 +24,7 @@ const handleApiError = (error, _request, response, _next) => {
             code: 'CONFLICT', message: 'E-mail, matricula ou codigo ja cadastrado', details: []
         } });
     }
-    console.error('Falha na API de turmas:', error);
+    console.error('Falha na API:', error);
     const unavailable = ['ECONNREFUSED', 'ETIMEDOUT', 'PROTOCOL_CONNECTION_LOST',
         'ER_CON_COUNT_ERROR', 'ENOTFOUND'].includes(error.code);
     return response.status(unavailable ? 503 : 500).json({ error: {
