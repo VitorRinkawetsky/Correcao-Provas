@@ -1,153 +1,155 @@
-const { withTransaction } = require('../database');
+const { withTransaction } = require('../config/database');
 const repo = require('../repositories/questao.repositories');
+const AppError = require('../utils/AppError');
 
-class AppError extends Error {
-    constructor(status, mensagem, detalhes) {
-        super(mensagem);
-        this.status = status;
-        this.detalhes = detalhes;
-    }
-}
-
-const TIPOS = ['Objetiva', 'Discursiva'];
-
-function validarId(valor) {
-    const id = Number(valor);
+function parseId(value) {
+    const id = Number(value);
     if (!Number.isInteger(id) || id <= 0) throw new AppError(400, 'Id inválido.');
     return id;
 }
 
-// Monta um objeto novo só com campos permitidos.
-// teacherId do corpo da requisição é ignorado de propósito.
-function validarEntrada(body) {
-    const erros = [];
-    const b = body && typeof body === 'object' ? body : {};
+// Monta um objeto novo só com campos permitidos. Campos como teacherId,
+// type/tipo e status enviados no body são ignorados de propósito.
+function validatePayload(body) {
+    const errors = [];
+    const input = body && typeof body === 'object' ? body : {};
 
-    const enunciado = typeof b.enunciado === 'string' ? b.enunciado.trim() : '';
-    if (!enunciado) erros.push('O enunciado é obrigatório.');
-    if (enunciado.length > 5000) erros.push('O enunciado excede 5000 caracteres.');
-
-    const tipo = b.tipo;
-    if (!TIPOS.includes(tipo)) erros.push('Tipo deve ser Objetiva ou Discursiva.');
+    const statement =
+        typeof input.statement === 'string' ? input.statement.trim() : '';
+    if (!statement) errors.push('O enunciado é obrigatório.');
+    if (statement.length > 5000) errors.push('O enunciado excede 5000 caracteres.');
 
     let tags = [];
-    if (b.tags !== undefined) {
-        if (!Array.isArray(b.tags) || b.tags.some((t) => typeof t !== 'string')) {
-            erros.push('Tags deve ser uma lista de textos.');
+    if (input.tags !== undefined) {
+        if (!Array.isArray(input.tags) || input.tags.some((t) => typeof t !== 'string')) {
+            errors.push('Tags deve ser uma lista de textos.');
         } else {
-            tags = [...new Set(b.tags.map((t) => t.trim()).filter(Boolean))];
-            if (tags.length > 20) erros.push('Máximo de 20 tags.');
-            if (tags.some((t) => t.length > 100)) erros.push('Cada tag deve ter até 100 caracteres.');
+            tags = [...new Set(input.tags.map((t) => t.trim()).filter(Boolean))];
+            if (tags.length > 20) errors.push('Máximo de 20 tags.');
+            if (tags.some((t) => t.length > 100)) {
+                errors.push('Cada tag deve ter até 100 caracteres.');
+            }
         }
     }
 
-    let alternativas = [];
-    if (tipo === 'Objetiva') {
-        const lista = b.alternativas;
-        if (!Array.isArray(lista) || lista.length < 2 || lista.length > 5) {
-            erros.push('Questões objetivas devem ter de 2 a 5 alternativas.');
-        } else {
-            alternativas = lista.map((a) => ({
-                texto: a && typeof a.texto === 'string' ? a.texto.trim() : '',
-                correta: a?.correta === true
-            }));
-            if (alternativas.some((a) => !a.texto)) {
-                erros.push('Nenhuma alternativa pode ter texto vazio.');
-            }
-            if (alternativas.some((a) => a.texto.length > 1000)) {
-                erros.push('Cada alternativa deve ter até 1000 caracteres.');
-            }
-            if (alternativas.filter((a) => a.correta).length !== 1) {
-                erros.push('Marque exatamente uma alternativa correta.');
-            }
+    let alternatives = [];
+    const list = input.alternatives;
+
+    if (!Array.isArray(list) || list.length < 2 || list.length > 5) {
+        errors.push('A questão deve ter de 2 a 5 alternativas.');
+    } else {
+        alternatives = list.map((a) => ({
+            text: a && typeof a.text === 'string' ? a.text.trim() : '',
+            isCorrect: false
+        }));
+
+        if (alternatives.some((a) => !a.text)) {
+            errors.push('Nenhuma alternativa pode ter texto vazio.');
         }
-    } else if (tipo === 'Discursiva' && Array.isArray(b.alternativas) && b.alternativas.length) {
-        erros.push('Questões discursivas não possuem alternativas.');
+        if (alternatives.some((a) => a.text.length > 1000)) {
+            errors.push('Cada alternativa deve ter até 1000 caracteres.');
+        }
+
+        // Contrato atual do Vue: correctAlternativeIndex.
+        // Também aceita isCorrect em cada alternativa.
+        let correctIndex = input.correctAlternativeIndex;
+        if (!Number.isInteger(correctIndex)) {
+            const flagged = list
+                .map((a, i) => (a?.isCorrect === true ? i : -1))
+                .filter((i) => i >= 0);
+            correctIndex = flagged.length === 1 ? flagged[0] : -1;
+        }
+
+        if (correctIndex < 0 || correctIndex >= alternatives.length) {
+            errors.push('Marque exatamente uma alternativa correta.');
+        } else {
+            alternatives[correctIndex].isCorrect = true;
+        }
     }
 
-    if (erros.length) throw new AppError(400, 'Dados inválidos.', erros);
-    return { enunciado, tipo, tags, alternativas };
+    if (errors.length) throw new AppError(400, 'Dados inválidos.', errors);
+    return { statement, tags, alternatives };
 }
 
-function parseFiltros(query) {
-    const texto = typeof query.texto === 'string' ? query.texto.trim() : '';
-    const tipo = typeof query.tipo === 'string' ? query.tipo : '';
-    if (tipo && !TIPOS.includes(tipo)) throw new AppError(400, 'Tipo inválido.');
+function parseFilters(query) {
+    const search = typeof query.search === 'string' ? query.search.trim() : '';
     const tags =
         typeof query.tags === 'string'
             ? query.tags.split(',').map((t) => t.trim()).filter(Boolean)
             : [];
-    return { texto, tipo, tags };
+    return { search, tags };
 }
 
-async function gravarFilhos(db, questaoId, dados) {
-    await repo.inserirAlternativas(db, questaoId, dados.alternativas);
-    await repo.inserirTags(db, questaoId, dados.tags);
+async function writeChildren(db, questionId, data) {
+    await repo.replaceAlternatives(db, questionId, data.alternatives);
+    await repo.replaceTags(db, questionId, data.tags);
 }
 
-async function listar(teacherId, query) {
-    return repo.listar(teacherId, parseFiltros(query));
+async function list(teacherId, query) {
+    return repo.list(teacherId, parseFilters(query));
 }
 
-async function obter(teacherId, idParam) {
-    const questao = await repo.buscarPorId(teacherId, validarId(idParam));
-    if (!questao) throw new AppError(404, 'Questão não encontrada.');
-    return questao;
+async function get(teacherId, idParam) {
+    const question = await repo.findById(teacherId, parseId(idParam));
+    if (!question) throw new AppError(404, 'Questão não encontrada.');
+    return question;
 }
 
-async function criar(teacherId, body) {
-    const dados = validarEntrada(body);
+async function create(teacherId, body) {
+    const data = validatePayload(body);
+
     const id = await withTransaction(async (db) => {
-        const novoId = await repo.inserir(db, teacherId, dados);
-        await gravarFilhos(db, novoId, dados);
-        return novoId;
+        const questionId = await repo.insertQuestion(db, teacherId, data.statement);
+        await writeChildren(db, questionId, data);
+        return questionId;
     });
-    return repo.buscarPorId(teacherId, id);
+
+    return repo.findById(teacherId, id);
 }
 
-async function atualizar(teacherId, idParam, body) {
-    const id = validarId(idParam);
-    const dados = validarEntrada(body);
+async function update(teacherId, idParam, body) {
+    const id = parseId(idParam);
+    const data = validatePayload(body);
 
-    const resultado = await withTransaction(async (db) => {
-        if (!(await repo.bloquear(db, teacherId, id))) {
+    const result = await withTransaction(async (db) => {
+        if (!(await repo.lockOwned(db, teacherId, id))) {
             throw new AppError(404, 'Questão não encontrada.');
         }
 
-        if (await repo.foiUsada(db, id)) {
-            // Já usada em prova: arquiva a versão antiga (continua ligada
-            // às provas) e a edição vira uma nova versão.
-            await repo.arquivar(db, id);
-            const novoId = await repo.inserir(db, teacherId, dados, id);
-            await gravarFilhos(db, novoId, dados);
-            return { id: novoId, novaVersao: true };
+        if (await repo.isUsedInExam(db, id)) {
+            // Já usada em prova: a versão antiga é arquivada (continua ligada
+            // às provas) e a edição cria uma nova questão.
+            await repo.archive(db, teacherId, id);
+            const newId = await repo.insertQuestion(db, teacherId, data.statement);
+            await writeChildren(db, newId, data);
+            return { id: newId, newVersion: true };
         }
 
-        await repo.atualizar(db, id, dados);
-        await repo.removerAlternativas(db, id);
-        await repo.removerTags(db, id);
-        await gravarFilhos(db, id, dados);
-        return { id, novaVersao: false };
+        await repo.updateStatement(db, teacherId, id, data.statement);
+        await writeChildren(db, id, data);
+        return { id, newVersion: false };
     });
 
-    const questao = await repo.buscarPorId(teacherId, resultado.id);
-    return { ...questao, novaVersao: resultado.novaVersao };
+    const question = await repo.findById(teacherId, result.id);
+    return { ...question, newVersion: result.newVersion };
 }
 
-async function excluir(teacherId, idParam) {
-    const id = validarId(idParam);
+async function remove(teacherId, idParam) {
+    const id = parseId(idParam);
 
     return withTransaction(async (db) => {
-        if (!(await repo.bloquear(db, teacherId, id))) {
+        if (!(await repo.lockOwned(db, teacherId, id))) {
             throw new AppError(404, 'Questão não encontrada.');
         }
-        if (await repo.foiUsada(db, id)) {
-            await repo.arquivar(db, id); // preserva provas já aplicadas
-            return { id, arquivada: true };
+
+        if (await repo.isUsedInExam(db, id)) {
+            await repo.archive(db, teacherId, id);
+            return { status: 'archived', id, archived: true };
         }
-        await repo.excluir(db, id);
-        return { id, arquivada: false };
+
+        await repo.remove(db, teacherId, id);
+        return { status: 'deleted', id, archived: false };
     });
 }
 
-module.exports = { AppError, listar, obter, criar, atualizar, excluir };
+module.exports = { list, get, create, update, remove };

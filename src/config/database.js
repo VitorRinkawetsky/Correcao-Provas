@@ -35,7 +35,11 @@ const withTransaction = async (fn) => {
         await connection.commit();
         return result;
     } catch (error) {
-        await connection.rollback();
+        try {
+            await connection.rollback();
+        } catch (rollbackError) {
+            console.error('Falha no rollback:', rollbackError.message);
+        }
         throw error;
     } finally {
         connection.release();

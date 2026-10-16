@@ -1,165 +1,203 @@
-const { pool } = require('../database');
+const { pool } = require('../config/database');
 
-const escapeLike = (s) => s.replace(/[\\%_]/g, '\\$&');
+const STATUS = { ACTIVE: 'active', ARCHIVED: 'archived' };
 
-async function buscarTags(db, ids) {
-    const mapa = new Map(ids.map((id) => [id, []]));
-    if (ids.length === 0) return mapa;
+const QUESTION_COLUMNS = `
+    q.id,
+    q.teacher_id  AS teacherId,
+    q.statement,
+    q.status,
+    q.created_at  AS createdAt,
+    q.updated_at  AS updatedAt
+`;
 
-    const [rows] = await db.query(
-        'SELECT questao_id, tag FROM questao_tags WHERE questao_id IN (?) ORDER BY tag',
+const escapeLike = (value) => value.replace(/[\\%_]/g, '\\$&');
+
+async function attachRelations(db, rows) {
+    if (rows.length === 0) return [];
+
+    const ids = rows.map((row) => row.id);
+
+    const [alternatives] = await db.query(
+        `SELECT id, question_id AS questionId, position,
+                alternative_text AS text, is_correct AS isCorrect
+           FROM alternatives
+          WHERE question_id IN (?)
+          ORDER BY question_id, position`,
         [ids]
     );
-    rows.forEach((r) => mapa.get(r.questao_id).push(r.tag));
-    return mapa;
+
+    const [tags] = await db.query(
+        `SELECT qt.question_id AS questionId, t.name
+           FROM question_tags qt
+           JOIN tags t ON t.id = qt.tag_id
+          WHERE qt.question_id IN (?)
+          ORDER BY t.name`,
+        [ids]
+    );
+
+    const byId = new Map(
+        rows.map((row) => [row.id, { ...row, alternatives: [], tags: [] }])
+    );
+
+    alternatives.forEach((a) =>
+        byId.get(a.questionId).alternatives.push({
+            id: a.id,
+            position: a.position,
+            text: a.text,
+            isCorrect: Boolean(a.isCorrect)
+        })
+    );
+    tags.forEach((t) => byId.get(t.questionId).tags.push(t.name));
+
+    return rows.map((row) => {
+        const question = byId.get(row.id);
+        // Usado pela tela de edição para marcar a alternativa correta.
+        question.correctAlternativeIndex = question.alternatives.findIndex(
+            (a) => a.isCorrect
+        );
+        return question;
+    });
 }
 
-async function listar(teacherId, { texto, tipo, tags = [] }) {
-    const params = [teacherId];
-    const where = ['q.teacher_id = ?', 'q.arquivada_em IS NULL'];
+async function list(teacherId, { search, tags }) {
+    const where = ['q.teacher_id = ?', 'q.status = ?'];
+    const params = [teacherId, STATUS.ACTIVE];
 
-    if (texto) {
-        where.push("q.enunciado LIKE ?");
-        params.push(`%${escapeLike(texto)}%`);
+    if (search) {
+        where.push('q.statement LIKE ?');
+        params.push(`%${escapeLike(search)}%`);
     }
-    if (tipo) {
-        where.push('q.tipo = ?');
-        params.push(tipo);
-    }
-    // Cada tag digitada precisa casar (parcialmente) com alguma tag da questão
+
     for (const tag of tags) {
         where.push(
-            'EXISTS (SELECT 1 FROM questao_tags t WHERE t.questao_id = q.id AND t.tag LIKE ?)'
+            `EXISTS (
+                SELECT 1
+                  FROM question_tags qt
+                  JOIN tags t ON t.id = qt.tag_id
+                 WHERE qt.question_id = q.id AND t.name LIKE ?
+            )`
         );
         params.push(`%${escapeLike(tag)}%`);
     }
 
-    const [questoes] = await pool.query(
-        `SELECT q.id, q.enunciado, q.tipo, q.criada_em
-           FROM questoes q
+    const [rows] = await pool.query(
+        `SELECT ${QUESTION_COLUMNS}
+           FROM questions q
           WHERE ${where.join(' AND ')}
-          ORDER BY q.criada_em DESC, q.id DESC`,
+          ORDER BY q.id ASC`,
         params
     );
 
-    const mapaTags = await buscarTags(pool, questoes.map((q) => q.id));
-    return questoes.map((q) => ({ ...q, tags: mapaTags.get(q.id) }));
+    return attachRelations(pool, rows);
 }
 
-async function buscarPorId(teacherId, id, db = pool) {
+async function findById(teacherId, id, db = pool) {
     const [rows] = await db.query(
-        `SELECT id, enunciado, tipo, criada_em
-           FROM questoes
-          WHERE id = ? AND teacher_id = ? AND arquivada_em IS NULL`,
-        [id, teacherId]
+        `SELECT ${QUESTION_COLUMNS}
+           FROM questions q
+          WHERE q.id = ? AND q.teacher_id = ? AND q.status = ?`,
+        [id, teacherId, STATUS.ACTIVE]
     );
-    if (rows.length === 0) return null;
 
-    const [alternativas] = await db.query(
-        'SELECT id, texto, correta FROM alternativas WHERE questao_id = ? ORDER BY ordem',
-        [id]
-    );
-    const mapaTags = await buscarTags(db, [id]);
-
-    return {
-        ...rows[0],
-        tags: mapaTags.get(id),
-        // "correta" é necessário para a tela de edição
-        alternativas: alternativas.map((a) => ({
-            id: a.id,
-            texto: a.texto,
-            correta: Boolean(a.correta)
-        }))
-    };
+    const [question] = await attachRelations(db, rows);
+    return question || null;
 }
 
-// Trava a linha dentro da transação (evita editar/excluir em paralelo)
-async function bloquear(db, teacherId, id) {
+// Trava a linha do professor dono dentro da transação.
+async function lockOwned(db, teacherId, id) {
     const [rows] = await db.query(
-        `SELECT id FROM questoes
-          WHERE id = ? AND teacher_id = ? AND arquivada_em IS NULL
+        `SELECT id FROM questions
+          WHERE id = ? AND teacher_id = ? AND status = ?
           FOR UPDATE`,
-        [id, teacherId]
+        [id, teacherId, STATUS.ACTIVE]
     );
     return rows[0] || null;
 }
 
-async function foiUsada(db, id) {
+async function isUsedInExam(db, id) {
     const [rows] = await db.query(
-        'SELECT 1 FROM prova_questoes WHERE questao_id = ? LIMIT 1',
+        'SELECT 1 FROM exam_questions WHERE question_id = ? LIMIT 1',
         [id]
     );
     return rows.length > 0;
 }
 
-async function inserir(db, teacherId, dados, versaoAnteriorId = null) {
-    const [resultado] = await db.query(
-        `INSERT INTO questoes (teacher_id, enunciado, tipo, versao_anterior_id)
-         VALUES (?, ?, ?, ?)`,
-        [teacherId, dados.enunciado, dados.tipo, versaoAnteriorId]
+async function insertQuestion(db, teacherId, statement) {
+    const [result] = await db.query(
+        'INSERT INTO questions (teacher_id, statement, status) VALUES (?, ?, ?)',
+        [teacherId, statement, STATUS.ACTIVE]
     );
-    return resultado.insertId;
+    return result.insertId;
 }
 
-async function inserirAlternativas(db, questaoId, alternativas) {
-    if (alternativas.length === 0) return;
-    const valores = alternativas.map((a, i) => [
-        questaoId,
-        a.texto,
-        a.correta ? 1 : 0,
-        i + 1
+async function updateStatement(db, teacherId, id, statement) {
+    await db.query(
+        'UPDATE questions SET statement = ? WHERE id = ? AND teacher_id = ?',
+        [statement, id, teacherId]
+    );
+}
+
+async function archive(db, teacherId, id) {
+    await db.query(
+        'UPDATE questions SET status = ? WHERE id = ? AND teacher_id = ?',
+        [STATUS.ARCHIVED, id, teacherId]
+    );
+}
+
+async function remove(db, teacherId, id) {
+    await db.query('DELETE FROM question_tags WHERE question_id = ?', [id]);
+    await db.query('DELETE FROM alternatives WHERE question_id = ?', [id]);
+    await db.query('DELETE FROM questions WHERE id = ? AND teacher_id = ?', [
+        id,
+        teacherId
     ]);
+}
+
+async function replaceAlternatives(db, questionId, alternatives) {
+    await db.query('DELETE FROM alternatives WHERE question_id = ?', [questionId]);
+
     await db.query(
-        'INSERT INTO alternativas (questao_id, texto, correta, ordem) VALUES ?',
-        [valores]
+        `INSERT INTO alternatives (question_id, position, alternative_text, is_correct)
+         VALUES ?`,
+        [
+            alternatives.map((a, index) => [
+                questionId,
+                index + 1,
+                a.text,
+                a.isCorrect ? 1 : 0
+            ])
+        ]
     );
 }
 
-async function inserirTags(db, questaoId, tags) {
-    if (tags.length === 0) return;
-    await db.query(
-        'INSERT INTO questao_tags (questao_id, tag) VALUES ?',
-        [tags.map((tag) => [questaoId, tag])]
-    );
-}
+async function replaceTags(db, questionId, tagNames) {
+    await db.query('DELETE FROM question_tags WHERE question_id = ?', [questionId]);
 
-async function atualizar(db, id, dados) {
-    await db.query(
-        'UPDATE questoes SET enunciado = ?, tipo = ? WHERE id = ?',
-        [dados.enunciado, dados.tipo, id]
-    );
-}
+    for (const name of tagNames) {
+        // insertId vem como o id da tag, tanto na criação quanto no duplicado.
+        const [result] = await db.query(
+            `INSERT INTO tags (name) VALUES (?)
+             ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)`,
+            [name]
+        );
 
-async function removerAlternativas(db, questaoId) {
-    await db.query('DELETE FROM alternativas WHERE questao_id = ?', [questaoId]);
-}
-
-async function removerTags(db, questaoId) {
-    await db.query('DELETE FROM questao_tags WHERE questao_id = ?', [questaoId]);
-}
-
-async function arquivar(db, id) {
-    await db.query(
-        'UPDATE questoes SET arquivada_em = UTC_TIMESTAMP() WHERE id = ?',
-        [id]
-    );
-}
-
-async function excluir(db, id) {
-    await db.query('DELETE FROM questoes WHERE id = ?', [id]);
+        await db.query(
+            'INSERT IGNORE INTO question_tags (question_id, tag_id) VALUES (?, ?)',
+            [questionId, result.insertId]
+        );
+    }
 }
 
 module.exports = {
-    listar,
-    buscarPorId,
-    bloquear,
-    foiUsada,
-    inserir,
-    inserirAlternativas,
-    inserirTags,
-    atualizar,
-    removerAlternativas,
-    removerTags,
-    arquivar,
-    excluir
+    list,
+    findById,
+    lockOwned,
+    isUsedInExam,
+    insertQuestion,
+    updateStatement,
+    archive,
+    remove,
+    replaceAlternatives,
+    replaceTags
 };
