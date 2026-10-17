@@ -1,17 +1,68 @@
 <script setup>
 import { Archive, ArrowLeft, Edit3, FilePlus2, FileText, ListChecks } from '@lucide/vue';
-import { computed } from 'vue';
-import { RouterLink, useRoute } from 'vue-router';
+import { onMounted, ref } from 'vue';
+import { RouterLink, useRoute, useRouter } from 'vue-router';
 
 import StatusBadge from '../components/ui/StatusBadge.vue';
-import { formatScore, getExamDetails } from '../data/mockData';
+import { formatScore } from '../data/mockData';
+import { archiveExam, getExamDetails } from '../services/examApi';
 
 const route = useRoute();
-const exam = computed(() => getExamDetails(route.params.id));
+const router = useRouter();
+const exam = ref(null);
+const loading = ref(true);
+const errorMessage = ref('');
+const actionError = ref('');
+const archiving = ref(false);
+
+const handleArchive = async () => {
+    if (!window.confirm('Arquivar esta prova? O historico das aplicacoes sera preservado.')) return;
+
+    actionError.value = '';
+    archiving.value = true;
+    try {
+        await archiveExam(exam.value.id);
+        await router.push('/provas');
+    } catch (error) {
+        actionError.value = error.message;
+    } finally {
+        archiving.value = false;
+    }
+};
+
+onMounted(async () => {
+    try {
+        exam.value = await getExamDetails(route.params.id);
+    } catch (error) {
+        errorMessage.value = error.status === 404
+            ? ''
+            : error.message;
+    } finally {
+        loading.value = false;
+    }
+});
 </script>
 
 <template>
-    <section v-if="exam" class="exam-details-page">
+    <section v-if="loading" class="not-found-state">
+        <span class="not-found-state__icon" aria-hidden="true">
+            <FileText :size="32" :stroke-width="1.6" />
+        </span>
+        <p class="eyebrow">Detalhes da prova</p>
+        <h1>Carregando prova...</h1>
+    </section>
+
+    <section v-else-if="errorMessage" class="not-found-state">
+        <span class="not-found-state__icon" aria-hidden="true">
+            <FileText :size="32" :stroke-width="1.6" />
+        </span>
+        <p class="eyebrow">Detalhes da prova</p>
+        <h1>Nao foi possivel carregar a prova.</h1>
+        <p>{{ errorMessage }}</p>
+        <RouterLink to="/" class="button button--primary">Voltar para a pagina inicial</RouterLink>
+    </section>
+
+    <section v-else-if="exam" class="exam-details-page">
         <RouterLink to="/" class="back-link">
             <ArrowLeft :size="17" />
             Voltar para a página inicial
@@ -28,7 +79,11 @@ const exam = computed(() => getExamDetails(route.params.id));
             </div>
 
             <div class="exam-actions" aria-label="Ações da prova">
-                <RouterLink :to="`/provas/${exam.id}/editar`" class="button button--secondary">
+                <RouterLink
+                    v-if="!['closed', 'archived'].includes(exam.status)"
+                    :to="`/provas/${exam.id}/editar`"
+                    class="button button--secondary"
+                >
                     <Edit3 :size="17" />
                     Editar
                 </RouterLink>
@@ -36,11 +91,18 @@ const exam = computed(() => getExamDetails(route.params.id));
                     <FilePlus2 :size="17" />
                     Criar aplicação
                 </button>
-                <button class="button button--secondary" type="button">
+                <button
+                    v-if="exam.status !== 'archived'"
+                    class="button button--secondary"
+                    type="button"
+                    :disabled="archiving"
+                    @click="handleArchive"
+                >
                     <Archive :size="17" />
-                    Arquivar
+                    {{ archiving ? 'Arquivando...' : 'Arquivar' }}
                 </button>
             </div>
+            <p v-if="actionError" class="form-error">{{ actionError }}</p>
 
             <dl class="exam-summary">
                 <div>

@@ -1,24 +1,27 @@
-function requireTeacher(req, res, next) {
-    let id = req.user?.id;
+const DEFAULT_TEACHER_ID = 1;
+const { ApiError } = require('../http/ApiError');
 
-    if (!id && process.env.NODE_ENV !== 'production') {
-        id =
-            Number(req.get('X-Dev-Teacher-Id')) ||
-            Number(process.env.DEV_TEACHER_ID) ||
-            1;
+module.exports = (request, _response, next) => {
+    // Authentication middleware must populate one of these server-side contexts.
+    // Request headers and payload fields are deliberately not considered.
+    const teacherId = Number(
+        request.authenticatedTeacherId
+        ?? request.user?.id
+        ?? request.auth?.teacherId
+        ?? process.env.TEACHER_ID
+    );
+
+    if ((!Number.isSafeInteger(teacherId) || teacherId < 1)
+        && process.env.NODE_ENV === 'production') {
+        next(new ApiError(401, 'UNAUTHENTICATED', 'Professor nao autenticado'));
+        return;
     }
 
-    const teacherId = Number(id);
-
-    if (!Number.isInteger(teacherId) || teacherId <= 0) {
-        return res.status(401).json({
-            status: 'error',
-            message: 'Não autenticado.'
-        });
-    }
-
-    req.teacherId = teacherId;
+    request.teacher = {
+        id: Number.isSafeInteger(teacherId) && teacherId > 0
+            ? teacherId
+            : DEFAULT_TEACHER_ID
+    };
     next();
-}
+};
 
-module.exports = requireTeacher;

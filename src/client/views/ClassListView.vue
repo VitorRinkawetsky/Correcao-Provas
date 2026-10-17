@@ -1,10 +1,26 @@
 <script setup>
 import { ArrowRight, Plus, Users } from '@lucide/vue';
+import { onMounted, ref } from 'vue';
 import { RouterLink } from 'vue-router';
 
-import { getClassSummaries } from '../data/mockData';
+import { getClasses } from '../services/classApi';
 
-const classSummaries = getClassSummaries();
+const classSummaries = ref([]);
+const isLoading = ref(true);
+const errorMessage = ref('');
+
+const loadClasses = async () => {
+    isLoading.value = true;
+    errorMessage.value = '';
+    try {
+        classSummaries.value = await getClasses();
+    } catch (error) {
+        errorMessage.value = error.message;
+    } finally {
+        isLoading.value = false;
+    }
+};
+onMounted(loadClasses);
 </script>
 
 <template>
@@ -26,7 +42,13 @@ const classSummaries = getClassSummaries();
                 </RouterLink>
             </div>
 
-            <div class="class-list">
+            <p v-if="isLoading" role="status">Carregando turmas...</p>
+            <div v-else-if="errorMessage">
+                <p role="alert">{{ errorMessage }}</p>
+                <button class="button button--secondary" type="button" @click="loadClasses">Tentar novamente</button>
+            </div>
+            <p v-else-if="!classSummaries.length">Nenhuma turma cadastrada.</p>
+            <div v-else class="class-list">
                 <RouterLink
                     v-for="classItem in classSummaries"
                     :key="classItem.id"
