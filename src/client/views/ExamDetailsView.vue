@@ -87,10 +87,15 @@ onMounted(async () => {
                     <Edit3 :size="17" />
                     Editar
                 </RouterLink>
-                <button class="button button--primary" type="button">
-                    <FilePlus2 :size="17" />
-                    Criar aplicação
-                </button>
+               
+<RouterLink
+    :to="{ name: 'application-create', query: { examId: exam.id } }"
+    class="button button--primary"
+>
+    <FilePlus2 :size="17" />
+    Criar aplicação
+</RouterLink>
+
                 <button
                     v-if="exam.status !== 'archived'"
                     class="button button--secondary"

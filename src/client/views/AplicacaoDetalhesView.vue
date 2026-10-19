@@ -1,82 +1,120 @@
+
 <script setup>
-import { computed } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import StatusBadge from '../components/ui/StatusBadge.vue'
-
+import { getApplication } from '../services/applicationApi'
 
 const route = useRoute()
 const router = useRouter()
 
-import { aplicacoes } from '../data/aplicacoes'
+const aplicacao = ref(null)
+const carregando = ref(true)
+const erro = ref('')
 
+async function carregarAplicacao() {
+  carregando.value = true
+  erro.value = ''
 
-const aplicacao = computed(() =>
-  aplicacoes.find((a) => String(a.id) === String(route.params.id)) || aplicacoes[0]
-)
-
-function gerarBaixarPdf() {
-  router.push({ name: 'application-versions', params: { id: aplicacao.value.id } })
+  try {
+    aplicacao.value = await getApplication(route.params.id)
+  } catch (error) {
+    aplicacao.value = null
+    erro.value = error.message || 'Não foi possível carregar a aplicação.'
+  } finally {
+    carregando.value = false
+  }
 }
-function abrirGabarito() { console.log('Gabarito (mock)') }
-function abrirCorrecoes() { console.log('Correções (mock)') }
-function abrirResultados() { console.log('Resultados (mock)') }
+
+onMounted(carregarAplicacao)
+watch(() => route.params.id, carregarAplicacao)
+
+function abrirGeracaoVersoes() {
+  if (!aplicacao.value?.id) return
+
+  router.push({
+    name: 'application-generate',
+    params: { id: aplicacao.value.id }
+  })
+}
+
+function abrirVersoes() {
+  if (!aplicacao.value?.id) return
+
+  router.push({
+    name: 'application-versions',
+    params: { id: aplicacao.value.id }
+  })
+}
+
+function abrirGabarito() {
+  abrirVersoes()
+}
+
+function abrirCorrecoes() {
+  console.log('Integração de correções pendente')
+}
+
+function abrirResultados() {
+  console.log('Integração de resultados pendente')
+}
 </script>
 
 <template>
   <section class="pagina">
-    <router-link :to="{ name: 'applications' }" class="voltar">← Voltar</router-link>
+    <router-link :to="{ name: 'applications' }" class="voltar">
+      ← Voltar para aplicações
+    </router-link>
 
-    <div class="painel">
-      <h1>{{ aplicacao.prova }}</h1>
+    <p v-if="carregando">Carregando aplicação...</p>
 
-      <div class="info-grid">
-        <div class="info-item">
-          <span class="info-rotulo">Turma</span>
-          <span class="info-valor">{{ aplicacao.turma }}</span>
-        </div>
-        <div class="info-item">
-          <span class="info-rotulo">Status</span>
-          <StatusBadge :status="aplicacao.status" />
-        </div>
-        <div class="info-item">
-          <span class="info-rotulo">Alunos</span>
-          <span class="info-valor">{{ aplicacao.alunos }}</span>
-        </div>
-        <div class="info-item">
-          <span class="info-rotulo">Corrigidas</span>
-          <span class="info-valor">{{ aplicacao.corrigidas }}</span>
-        </div>
-      </div>
-
-      <div class="acoes">
-        <button class="btn btn-primary" @click="gerarBaixarPdf">Gerar / Baixar PDF</button>
-        <button class="btn btn-secondary" @click="abrirGabarito">Gabarito</button>
-        <button class="btn btn-secondary" @click="abrirCorrecoes">Correções</button>
-        <button class="btn btn-secondary" @click="abrirResultados">Resultados</button>
-      </div>
+    <div v-else-if="erro" role="alert">
+      <p>{{ erro }}</p>
+      <button type="button" @click="carregarAplicacao">
+        Tentar novamente
+      </button>
     </div>
+
+    <template v-else-if="aplicacao">
+      <header class="cabecalho-pagina">
+        <div>
+          <h1>Detalhes da aplicação</h1>
+          <p>{{ aplicacao.examTitle }}</p>
+        </div>
+        <StatusBadge :status="aplicacao.status" />
+      </header>
+
+      <section class="card-detalhes">
+        <h2>Informações da aplicação</h2>
+        <p><strong>Prova:</strong> {{ aplicacao.examTitle }}</p>
+        <p><strong>Turma:</strong> {{ aplicacao.className }}</p>
+        <p><strong>ID:</strong> {{ aplicacao.id }}</p>
+        <p><strong>Status:</strong> {{ aplicacao.status }}</p>
+      </section>
+
+      <section class="acoes-aplicacao">
+        <h2>Ações</h2>
+
+        <button type="button" @click="abrirGeracaoVersoes">
+          Gerar versões da prova
+        </button>
+
+        <button type="button" @click="abrirVersoes">
+          Ver versões / baixar PDF
+        </button>
+
+        <button type="button" @click="abrirGabarito">
+          Gabarito
+        </button>
+
+        <button type="button" @click="abrirCorrecoes">
+          Correções
+        </button>
+
+        <button type="button" @click="abrirResultados">
+          Resultados
+        </button>
+      </section>
+    </template>
   </section>
 </template>
-
-<style scoped>
-.pagina { padding: 24px; }
-.voltar {
-  display: inline-block;
-  margin-bottom: 16px;
-  color: var(--color-primary, #0f5e56);
-  text-decoration: none;
-}
-.painel {
-  background: var(--color-surface, #fff);
-  border-radius: var(--radius-md, 8px);
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-.info-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
-.info-item { display: flex; flex-direction: column; gap: 4px; }
-.info-rotulo { font-size: 0.85rem; color: var(--color-text-muted, #6b7280); }
-.info-valor { font-weight: 600; font-size: 1.1rem; }
-.acoes { display: flex; flex-wrap: wrap; gap: 12px; }
-</style>

@@ -1,5 +1,6 @@
 const express = require('express');
 const path = require('path');
+const applicationsRoutes = require('./routes/applicationsRoutes');
 
 const {
     pool,
@@ -10,6 +11,7 @@ const teacherContext = require('./middlewares/teacherContext');
 const { handleApiError } = require('./http/ApiError');
 
 const classesRoutes = require('./routes/classesRoutes');
+const applicationVersionsRoutes = require('./routes/applicationVersionsRoutes');
 
 const app = express();
 
@@ -43,6 +45,8 @@ app.get('/api/health', async (_request, response) => {
 });
 
 app.use('/api/exams', examsRoutes);
+app.use('/api/application-versions', applicationVersionsRoutes);
+app.use('/api/applications', applicationsRoutes);
 
 /*
 |--------------------------------------------------------------------------
