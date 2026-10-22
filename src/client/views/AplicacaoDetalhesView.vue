@@ -18,7 +18,9 @@ function gerarBaixarPdf() {
   router.push({ name: 'application-versions', params: { id: aplicacao.value.id } })
 }
 function abrirGabarito() { console.log('Gabarito (mock)') }
-function abrirCorrecoes() { console.log('Correções (mock)') }
+function abrirCorrecoes() {
+  router.push({ name: 'application-corrections', params: { id: aplicacao.value.id } })
+}
 function abrirResultados() { console.log('Resultados (mock)') }
 </script>
 
