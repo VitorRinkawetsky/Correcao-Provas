@@ -6,6 +6,7 @@ const {
     checkDatabaseConnection
 } = require('./config/database');
 const examsRoutes = require('./routes/examsRoutes');
+const correctionsRoutes = require('./routes/correctionsRoutes');
 const teacherContext = require('./middlewares/teacherContext');
 const { handleApiError } = require('./http/ApiError');
 
@@ -43,6 +44,7 @@ app.get('/api/health', async (_request, response) => {
 });
 
 app.use('/api/exams', examsRoutes);
+app.use('/api/corrections', correctionsRoutes);
 
 /*
 |--------------------------------------------------------------------------
