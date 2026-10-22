@@ -8,6 +8,8 @@ const router = Router();
 router.use(teacherContext);
 router.get('/context', controller.context);
 router.post('/', controller.create);
+router.get('/:id', controller.details);
+router.put('/:id', controller.update);
 router.use(handleApiError);
 
 module.exports = router;

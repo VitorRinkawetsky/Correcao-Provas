@@ -1,7 +1,12 @@
 <script setup>
-import { computed, onBeforeUnmount, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { createCorrection, getCorrectionContext } from '../services/correctionApi';
+import {
+    createCorrection,
+    getCorrection,
+    getCorrectionContext,
+    updateCorrection
+} from '../services/correctionApi';
 
 const route = useRoute();
 const router = useRouter();
@@ -17,6 +22,15 @@ const scanning = ref(false);
 const video = ref(null);
 let scanTimer;
 let stream;
+
+const correctionId = computed(() => route.params.correctionId || null);
+const isPersistedCorrection = computed(() => Boolean(correctionId.value));
+const totalScore = computed(() => (
+    context.value?.questions?.reduce(
+        (total, question) => total + Number(question.awardedScore || 0),
+        0
+    ) || 0
+));
 
 const isCameraSupported = computed(() => (
     'BarcodeDetector' in window
@@ -91,21 +105,55 @@ async function loadContext() {
     }
 }
 
+async function loadCorrection() {
+    loading.value = true;
+    errorMessage.value = '';
+    try {
+        const data = await getCorrection(correctionId.value);
+        context.value = data;
+        code.value = data.qrCodePayload;
+        studentName.value = data.studentName || '';
+        studentRegistration.value = data.studentRegistration || '';
+        answers.value = Object.fromEntries(
+            data.questions
+                .filter((question) => question.selectedAlternativeId)
+                .map((question) => [
+                    question.questionId,
+                    question.selectedAlternativeId
+                ])
+        );
+    } catch (error) {
+        errorMessage.value = error.message || 'Nao foi possivel carregar a correcao.';
+    } finally {
+        loading.value = false;
+    }
+}
+
 async function submitCorrection() {
     loading.value = true;
     errorMessage.value = '';
     message.value = '';
     try {
-        const result = await createCorrection({
+        const payload = {
             qrCodePayload: code.value,
             studentName: studentName.value,
             studentRegistration: studentRegistration.value,
+            notes: context.value?.notes || '',
             answers: Object.entries(answers.value).map(([questionId, selectedAlternativeId]) => ({
                 questionId: Number(questionId),
                 selectedAlternativeId: Number(selectedAlternativeId)
             }))
-        });
+        };
+        const result = isPersistedCorrection.value
+            ? await updateCorrection(correctionId.value, payload)
+            : await createCorrection(payload);
         message.value = `Correcao salva. Nota: ${result.totalScore}`;
+        if (!isPersistedCorrection.value && result.id) {
+            router.push({
+                name: 'correction-details',
+                params: { correctionId: result.id }
+            });
+        }
     } catch (error) {
         errorMessage.value = error.message || 'Nao foi possivel salvar a correcao.';
     } finally {
@@ -113,6 +161,9 @@ async function submitCorrection() {
     }
 }
 
+onMounted(() => {
+    if (isPersistedCorrection.value) loadCorrection();
+});
 onBeforeUnmount(stopScanner);
 </script>
 
@@ -123,10 +174,14 @@ onBeforeUnmount(stopScanner);
         </button>
         <div class="card">
             <h1>Corrigir prova</h1>
-            <p class="subtitulo">Leia o QR Code da prova ou informe o codigo manualmente.</p>
+            <p class="subtitulo">
+                {{ isPersistedCorrection
+                    ? 'Revise as respostas e ajuste a correcao persistida.'
+                    : 'Leia o QR Code da prova ou informe o codigo manualmente.' }}
+            </p>
 
             <video v-show="scanning" ref="video" class="camera" aria-label="Leitor de QR Code"></video>
-            <div class="acoes">
+            <div v-if="!isPersistedCorrection" class="acoes">
                 <button class="btn btn-primary" :disabled="scanning || loading" @click="startScanner">
                     {{ scanning ? 'Lendo QR Code...' : 'Ler QR Code' }}
                 </button>
@@ -145,6 +200,10 @@ onBeforeUnmount(stopScanner);
             <p v-if="message" class="mensagem sucesso">{{ message }}</p>
 
             <form v-if="context" class="correcao-form" @submit.prevent="submitCorrection">
+                <div class="resumo">
+                    <span>{{ context.examTitle }} · Versao {{ context.versionNumber }}</span>
+                    <strong>Nota total: {{ totalScore.toFixed(2) }}</strong>
+                </div>
                 <div class="identificacao">
                     <label>
                         Nome do aluno
@@ -156,7 +215,11 @@ onBeforeUnmount(stopScanner);
                     </label>
                 </div>
                 <div v-for="question in context.questions" :key="question.questionId" class="questao">
-                    <p><strong>{{ question.printedOrder }}.</strong> {{ question.statement }}</p>
+                    <p>
+                        <strong>{{ question.printedOrder }}.</strong>
+                        {{ question.statement }}
+                        <span class="pontuacao">({{ Number(question.score || 0).toFixed(2) }} pts)</span>
+                    </p>
                     <label v-for="alternative in question.alternatives" :key="alternative.id" class="alternativa">
                         <input
                             v-model="answers[question.questionId]"
@@ -165,9 +228,20 @@ onBeforeUnmount(stopScanner);
                             :value="alternative.id"
                         >
                         {{ alternative.text }}
+                        <span v-if="isPersistedCorrection && alternative.isCorrect" class="correta">
+                            · correta
+                        </span>
                     </label>
+                    <p v-if="isPersistedCorrection" class="resultado-questao">
+                        Resposta:
+                        {{ question.selectedAlternativeId || 'em branco' }}
+                        · {{ question.isCorrect ? 'correta' : 'incorreta' }}
+                        · {{ Number(question.awardedScore || 0).toFixed(2) }} pts
+                    </p>
                 </div>
-                <button class="btn btn-primary" :disabled="loading">Salvar correcao</button>
+                <button class="btn btn-primary" :disabled="loading">
+                    {{ isPersistedCorrection ? 'Salvar ajustes' : 'Salvar correcao' }}
+                </button>
             </form>
         </div>
     </section>
@@ -188,6 +262,9 @@ onBeforeUnmount(stopScanner);
 .identificacao { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .questao { border-top: 1px solid var(--color-border, #e5e7eb); padding-top: 14px; }
 .alternativa { display: block; padding: 6px 0; }
+.resumo { display: flex; justify-content: space-between; gap: 12px; padding: 12px; background: #f3f4f6; border-radius: 6px; }
+.pontuacao, .resultado-questao { color: var(--color-text-muted, #6b7280); font-size: 0.9rem; }
+.correta { color: #166534; font-weight: 600; }
 .mensagem { padding: 10px 12px; border-radius: 6px; }
 .erro { color: #b91c1c; background: #fee2e2; }
 .sucesso { color: #166534; background: #dcfce7; }

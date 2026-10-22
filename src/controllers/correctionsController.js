@@ -14,5 +14,17 @@ module.exports = {
         response,
         await correctionsService.correct(request.teacher.id, request.body),
         201
+    ),
+    details: async (request, response) => success(
+        response,
+        await correctionsService.getCorrection(request.params.id, request.teacher.id)
+    ),
+    update: async (request, response) => success(
+        response,
+        await correctionsService.update(
+            request.params.id,
+            request.teacher.id,
+            request.body
+        )
     )
 };

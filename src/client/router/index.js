@@ -129,6 +129,12 @@ const routes = [
                 name: 'application-corrections',
                 component: CorrecaoView,
                 meta: { title: 'Corrigir prova' }
+            },
+            {
+                path: 'correcoes/:correctionId',
+                name: 'correction-details',
+                component: CorrecaoView,
+                meta: { title: 'Detalhes da correção' }
             }
         ]
     },
