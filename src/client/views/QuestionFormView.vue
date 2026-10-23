@@ -1,14 +1,17 @@
 <script setup>
 import { ArrowLeft, CheckCircle2, Plus, Save, Trash2 } from '@lucide/vue';
-import { computed, reactive, ref, watch } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
 
 import { useQuestionStore, validateQuestionInput } from '../data/questionStore';
 
 const route = useRoute();
 const router = useRouter();
-const { getQuestion, saveQuestion } = useQuestionStore();
+const { getQuestion, saveQuestion, loadQuestions } = useQuestionStore();
 const errors = ref({});
+const submitError = ref('');
+const isSaving = ref(false);
+const isLoading = ref(false);
 const correctAlternativeKey = ref('');
 let alternativeKey = 0;
 
@@ -21,8 +24,9 @@ const form = reactive({
 const questionId = computed(() => route.params.id ? Number(route.params.id) : null);
 const isEditing = computed(() => questionId.value !== null);
 const existingQuestion = computed(() => isEditing.value ? getQuestion(questionId.value) : null);
-const questionNotFound = computed(() => isEditing.value && !existingQuestion.value);
-
+const questionNotFound = computed(
+    () => isEditing.value && !isLoading.value && !existingQuestion.value
+);
 const makeAlternative = (alternative = {}) => ({
     key: alternative.id ? `saved-${alternative.id}` : `new-${++alternativeKey}`,
     id: alternative.id ?? null,
@@ -31,12 +35,15 @@ const makeAlternative = (alternative = {}) => ({
 
 const resetForm = () => {
     errors.value = {};
+    submitError.value = '';
 
     if (existingQuestion.value) {
         form.statement = existingQuestion.value.statement;
         form.tags = existingQuestion.value.tags.join(', ');
         form.alternatives = existingQuestion.value.alternatives.map(makeAlternative);
-        correctAlternativeKey.value = `saved-${existingQuestion.value.correctAlternativeId}`;
+                correctAlternativeKey.value = existingQuestion.value.correctAlternativeId == null
+            ? ''
+            : `saved-${existingQuestion.value.correctAlternativeId}`;
         return;
     }
 
@@ -47,6 +54,21 @@ const resetForm = () => {
 };
 
 watch(() => route.params.id, resetForm, { immediate: true });
+// Ao abrir /questoes/:id/editar diretamente, a lista ainda não foi carregada.
+onMounted(async () => {
+    if (!isEditing.value || existingQuestion.value) return;
+
+    isLoading.value = true;
+
+    try {
+        await loadQuestions();
+        resetForm();
+    } catch (error) {
+        submitError.value = error.message;
+    } finally {
+        isLoading.value = false;
+    }
+});
 
 const addAlternative = () => {
     if (form.alternatives.length >= 5) return;
@@ -63,22 +85,21 @@ const removeAlternative = (index) => {
     }
 };
 
-const handleSubmit = () => {
-    const correctAlternativeIndex = form.alternatives.findIndex(
-        (alternative) => alternative.key === correctAlternativeKey.value
-    );
-    const input = {
-        statement: form.statement,
-        tags: form.tags,
-        alternatives: form.alternatives,
-        correctAlternativeIndex
-    };
-    const validation = validateQuestionInput(input);
-    errors.value = validation.errors;
 
-    if (!validation.valid) return;
+    const handleSubmit = async () => {
+        isSaving.value = true;
+    submitError.value = '';
 
-    saveQuestion(input, questionId.value);
+    try {
+        await saveQuestion(input, questionId.value);
+    } catch (error) {
+        submitError.value = error.message || 'Não foi possível salvar a questão.';
+        errors.value = { ...errors.value, ...(error.validationErrors || {}) };
+        return;
+    } finally {
+        isSaving.value = false;
+    }
+
     router.push({
         name: 'questions',
         query: { saved: isEditing.value ? 'updated' : 'created' }
@@ -87,7 +108,11 @@ const handleSubmit = () => {
 </script>
 
 <template>
-    <section v-if="!questionNotFound" class="question-form-page" aria-labelledby="question-form-title">
+        <section v-if="isLoading" class="not-found-state" role="status">
+        <p>Carregando questão...</p>
+    </section>
+
+    <section v-else-if="!questionNotFound" class="question-form-page" aria-labelledby="question-form-title">
         <RouterLink to="/questoes" class="back-link">
             <ArrowLeft :size="17" aria-hidden="true" />
             Voltar ao banco de questões
@@ -213,14 +238,16 @@ const handleSubmit = () => {
                 </label>
                 <p id="tags-hint" class="field-hint">Separe múltiplas tags por vírgulas.</p>
             </section>
+            <p v-if="submitError" class="field-error" role="alert">{{ submitError }}</p>
 
             <div class="question-form__actions">
                 <RouterLink to="/questoes" class="button button--secondary">Cancelar</RouterLink>
-                <button type="submit" class="button button--primary">
+                <button type="submit" class="button button--primary" :disabled="isSaving">
                     <Save :size="18" aria-hidden="true" />
-                    Salvar questão
+                    {{ isSaving ? 'Salvando...' : 'Salvar questão' }}
                 </button>
             </div>
+            
         </form>
     </section>
 
