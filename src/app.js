@@ -1,14 +1,18 @@
+
 const express = require('express');
 const path = require('path');
+
+const applicationsRoutes = require('./routes/applicationsRoutes');
+const reportsRoutes = require('./routes/reportsRoutes');
 
 const {
     pool,
     checkDatabaseConnection
 } = require('./config/database');
+
 const examsRoutes = require('./routes/examsRoutes');
 const teacherContext = require('./middlewares/teacherContext');
 const { handleApiError } = require('./http/ApiError');
-
 const classesRoutes = require('./routes/classesRoutes');
 
 const app = express();
@@ -42,7 +46,15 @@ app.get('/api/health', async (_request, response) => {
     }
 });
 
+/*
+|--------------------------------------------------------------------------
+| ROTAS DA API
+|--------------------------------------------------------------------------
+*/
+
 app.use('/api/exams', examsRoutes);
+app.use('/api/applications', applicationsRoutes);
+app.use('/api/reports', reportsRoutes);
 
 /*
 |--------------------------------------------------------------------------
@@ -346,8 +358,7 @@ app.put('/api/questions/:id', teacherContext, async (request, response) => {
         await connection.execute(
             `
             UPDATE questions
-            SET
-                statement = ?
+            SET statement = ?
             WHERE id = ? AND teacher_id = ?
             `,
             [
