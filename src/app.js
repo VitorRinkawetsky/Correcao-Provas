@@ -1,6 +1,8 @@
+
 const express = require('express');
 const path = require('path');
 const applicationsRoutes = require('./routes/applicationsRoutes');
+const reportsRoutes = require('./routes/reportsRoutes');
 
 const {
     pool,
@@ -47,6 +49,7 @@ app.get('/api/health', async (_request, response) => {
 app.use('/api/exams', examsRoutes);
 app.use('/api/application-versions', applicationVersionsRoutes);
 app.use('/api/applications', applicationsRoutes);
+app.use('/api/reports', reportsRoutes);
 
 /*
 |--------------------------------------------------------------------------
