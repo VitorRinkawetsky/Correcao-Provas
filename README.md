@@ -259,14 +259,33 @@ Abra [http://localhost:3000/api/health](http://localhost:3000/api/health).
 
 O Vite encaminha as chamadas `/api` para o Express em [http://localhost:3000](http://localhost:3000). As telas de listagem, detalhes e formulario de provas usam a API para consultar e salvar os dados no MySQL. As outras telas continuam com dados simulados enquanto seus CRUDs REST sao implementados. Consulte [a análise da integração da N2](docs/n2-banco-dados.md).
 
-A API de provas usa a identidade autenticada pelo servidor. Enquanto a
-autenticacao ainda nao estiver habilitada no ambiente local, o servidor usa o
-professor de desenvolvimento configurado em `TEACHER_ID` (ou `1` por padrao);
-o cabecalho `x-teacher-id` e ignorado.
+A API usa exclusivamente a identidade do professor autenticado pelo cookie de
+sessão. Crie uma conta em `#/cadastro` e entre por `#/login`; identificadores em
+corpo, query string ou cabeçalho não substituem a sessão.
+
+Se o volume MySQL já existia antes da autenticação, aplique uma vez a migração
+aditiva, sem apagar os dados:
+
+```bash
+docker compose exec -T db mysql -usgp -psgp_dev correcao_provas < database/migrations/20261025_create_auth_sessions.sql
+```
+
+No PowerShell:
+
+```powershell
+Get-Content -Raw .\database\migrations\20261025_create_auth_sessions.sql |
+    docker compose exec -T db mysql -usgp -psgp_dev correcao_provas
+```
+
+O `database/init.sql` já inclui a tabela para volumes novos.
 
 ### Testes
 
+Os testes de integração da autenticação exigem o MySQL com o schema e a
+migração atuais; a suíte falha explicitamente se o banco não estiver acessível.
+
 ```bash
+npm run db:up
 npm test
 ```
 
@@ -277,7 +296,13 @@ npm run build
 npm start
 ```
 
-O servidor Express usa a porta definida em `PORT` ou, na ausência dela, a porta `3000`.
+Em produção, configure `NODE_ENV=production`; fora dos modos explícitos
+`development` e `test`, o cookie de sessão é emitido com `Secure`. Se houver
+proxy reverso terminando HTTPS, configure `TRUST_PROXY_HOPS` com a quantidade
+exata de proxies confiáveis entre o cliente e o Express (por exemplo, `1` para
+um único proxy). Não use um valor amplo: o IP resolvido também protege o login
+contra excesso de tentativas. O servidor Express usa a porta definida em
+`PORT` ou, na ausência dela, a porta `3000`.
 
 ---
 

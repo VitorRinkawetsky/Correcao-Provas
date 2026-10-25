@@ -1,5 +1,9 @@
+import { reportUnauthorized } from './apiClient';
+
 const request = async (path = '', options = {}) => {
-    const response = await fetch(`/api/classes${path}`, {
+    const url = `/api/classes${path}`;
+    const response = await fetch(url, {
+        credentials: 'same-origin',
         ...options,
         headers: { Accept: 'application/json',
             ...(options.body ? { 'Content-Type': 'application/json' } : {}) }
@@ -9,6 +13,8 @@ const request = async (path = '', options = {}) => {
     if (!response.ok || !payload || !Object.hasOwn(payload, 'data')) {
         const error = new Error(payload?.error?.message || 'Nao foi possivel acessar as turmas');
         error.code = payload?.error?.code;
+        error.status = response.status;
+        if (response.status === 401) reportUnauthorized(url, error);
         throw error;
     }
     return payload.data;

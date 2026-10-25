@@ -52,7 +52,12 @@ function abrirGabarito() {
 }
 
 function abrirCorrecoes() {
-  console.log('Integração de correções pendente')
+  if (!aplicacao.value?.id) return
+
+  router.push({
+    name: 'application-corrections',
+    params: { id: aplicacao.value.id }
+  })
 }
 
 function abrirResultados() {

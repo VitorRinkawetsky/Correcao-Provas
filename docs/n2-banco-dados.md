@@ -103,6 +103,13 @@ MySQL 8.4:
 mysql -u root -p < database/init.sql
 ```
 
+Para um banco existente, mudanças aditivas devem ser aplicadas pelos arquivos
+versionados em `database/migrations/`. A autenticação de professores requer:
+
+```bash
+mysql -u root -p correcao_provas < database/migrations/20261025_create_auth_sessions.sql
+```
+
 ### Reinicialização completa
 
 O script do diretório `docker-entrypoint-initdb.d` roda apenas quando o volume

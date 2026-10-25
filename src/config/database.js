@@ -26,8 +26,8 @@ const checkDatabaseConnection = async () => {
 const closeDatabaseConnection = () => pool.end();
 
 // Executa fn dentro de uma transação; faz rollback se der erro.
-const withTransaction = async (fn) => {
-    const connection = await pool.getConnection();
+const createTransactionRunner = (databasePool) => async (fn) => {
+    const connection = await databasePool.getConnection();
 
     try {
         await connection.beginTransaction();
@@ -46,9 +46,12 @@ const withTransaction = async (fn) => {
     }
 };
 
+const withTransaction = createTransactionRunner(pool);
+
 module.exports = {
     pool,
     checkDatabaseConnection,
     closeDatabaseConnection,
+    createTransactionRunner,
     withTransaction
 };

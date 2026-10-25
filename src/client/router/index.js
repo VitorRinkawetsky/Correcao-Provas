@@ -16,12 +16,32 @@ import AplicacaoFormView from '../views/AplicacaoFormView.vue';
 import AplicacaoDetalhesView from '../views/AplicacaoDetalhesView.vue';
 import AplicacaoGerarView from '../views/AplicacaoGerarView.vue';
 import AplicacaoVersoesView from '../views/AplicacaoVersoesView.vue';
+import CorrecoesView from '../views/CorrecoesView.vue';
+import CorrecoesSemAlunoView from '../views/CorrecoesSemAlunoView.vue';
 import RelatoriosView from '../views/RelatoriosView.vue';
+import RegisterView from '../views/RegisterView.vue';
+import LoginView from '../views/LoginView.vue';
+import { useAuthStore } from '../data/authStore';
+import { setUnauthorizedHandler } from '../services/apiClient';
+import { createAuthGuard } from './authGuard';
 
 const routes = [
     {
+        path: '/login',
+        name: 'login',
+        component: LoginView,
+        meta: { title: 'Entrar', guestOnly: true }
+    },
+    {
+        path: '/cadastro',
+        name: 'register',
+        component: RegisterView,
+        meta: { title: 'Cadastro de professor', guestOnly: true }
+    },
+    {
         path: '/',
         component: AppShell,
+        meta: { requiresAuth: true },
         children: [
             {
                 path: '',
@@ -114,6 +134,18 @@ const routes = [
                 meta: { title: 'Gerar aplicação' }
             },
             {
+                path: 'aplicacoes/:id/correcoes',
+                name: 'application-corrections',
+                component: CorrecoesView,
+                meta: { title: 'Correções' }
+            },
+            {
+                path: 'aplicacoes/:id/correcoes/sem-aluno',
+                name: 'application-unidentified-corrections',
+                component: CorrecoesSemAlunoView,
+                meta: { title: 'Correções sem aluno' }
+            },
+            {
                 path: 'aplicacoes/:id/versoes',
                 name: 'application-versions',
                 component: AplicacaoVersoesView,
@@ -193,6 +225,23 @@ const router = createRouter({
     routes,
     scrollBehavior: () => ({ top: 0 })
 });
+
+const authStore = useAuthStore();
+
+setUnauthorizedHandler(({ path }) => {
+    authStore.clearSession();
+
+    const currentRoute = router.currentRoute.value;
+    const isProtected = currentRoute.matched.some((record) => record.meta.requiresAuth);
+    if (isProtected && path !== '/api/auth/me') {
+        void router.replace({
+            name: 'login',
+            query: { redirect: currentRoute.fullPath }
+        });
+    }
+});
+
+router.beforeEach(createAuthGuard(authStore));
 
 router.afterEach((to) => {
     document.title = `${to.meta.title || 'SGP'} · SGP Católica`;

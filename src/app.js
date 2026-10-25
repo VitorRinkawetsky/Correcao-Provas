@@ -3,6 +3,10 @@ const express = require('express');
 const path = require('path');
 const applicationsRoutes = require('./routes/applicationsRoutes');
 const reportsRoutes = require('./routes/reportsRoutes');
+const authRoutes = require('./routes/authRoutes');
+const correctionsRoutes = require('./routes/correctionsRoutes');
+const requireTeacherSession = require('./middlewares/requireTeacherSession');
+const { TRUST_PROXY_HOPS } = require('./config/proxy');
 
 
 const { checkDatabaseConnection } = require('./config/database');
@@ -15,6 +19,10 @@ const applicationVersionsRoutes = require('./routes/applicationVersionsRoutes');
 
 
 const app = express();
+
+if (TRUST_PROXY_HOPS > 0) {
+    app.set('trust proxy', TRUST_PROXY_HOPS);
+}
 
 app.use(express.json());
 
@@ -36,9 +44,13 @@ app.get('/api/health', async (_request, response) => {
     }
 });
 
+app.use('/api/auth', authRoutes);
+app.use('/api', requireTeacherSession);
+
 app.use('/api/exams', examsRoutes);
 app.use('/api/application-versions', applicationVersionsRoutes);
 app.use('/api/applications', applicationsRoutes);
+app.use('/api/corrections', correctionsRoutes);
 app.use('/api/reports', reportsRoutes);
 
 // Rotas de questões (substitui os endpoints inline que existiam neste arquivo)

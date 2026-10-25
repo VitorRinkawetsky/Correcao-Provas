@@ -3,6 +3,8 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
+import { reportUnauthorized } from '../services/apiClient'
+
 const route = useRoute()
 const router = useRouter()
 
@@ -31,11 +33,17 @@ async function requisicaoJson(url) {
   }
 
   if (!response.ok) {
-    throw new Error(
+    const serverError = typeof resultado.error === 'string'
+      ? resultado.error
+      : resultado.error?.message
+    const error = new Error(
       resultado.message ||
-      resultado.error ||
+      serverError ||
       `Erro HTTP ${response.status}`
     )
+    error.status = response.status
+    if (response.status === 401) reportUnauthorized(url, error)
+    throw error
   }
 
   return resultado

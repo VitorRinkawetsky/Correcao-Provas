@@ -1,5 +1,7 @@
 import { readonly, ref } from 'vue';
 
+import { reportUnauthorized } from '../services/apiClient';
+
 const clone = (value) => JSON.parse(JSON.stringify(value));
 
 export const normalizeTags = (value) => {
@@ -115,12 +117,15 @@ export const loadQuestions = async () => {
     if (!response.ok) {
         const data = await response.json().catch(() => ({}));
 
-        throw new Error(
+        const error = new Error(
             apiErrorMessage(
                 data,
                 'Não foi possível carregar as questões.'
             )
         );
+        error.status = response.status;
+        if (response.status === 401) reportUnauthorized('/api/questions', error);
+        throw error;
     }
 
     const data = await response.json();
@@ -182,6 +187,8 @@ const saveQuestion = async (input, id = null) => {
         );
 
         error.validationErrors = apiValidationErrors(data);
+        error.status = response.status;
+        if (response.status === 401) reportUnauthorized(url, error);
 
         throw error;
     }
@@ -202,12 +209,17 @@ const deleteQuestion = async (id) => {
     if (!response.ok) {
         const data = await response.json().catch(() => ({}));
 
-              throw new Error(
+        const error = new Error(
             apiErrorMessage(
                 data,
                 'Não foi possível excluir a questão.'
             )
         );
+        error.status = response.status;
+        if (response.status === 401) {
+            reportUnauthorized(`/api/questions/${id}`, error);
+        }
+        throw error;
     }
 
     questionsState.value = questionsState.value.filter(
