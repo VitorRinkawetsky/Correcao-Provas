@@ -1,3 +1,4 @@
+
 import { createRouter, createWebHashHistory } from 'vue-router';
 
 import AppShell from '../components/layout/AppShell.vue';
@@ -16,6 +17,7 @@ import AplicacaoDetalhesView from '../views/AplicacaoDetalhesView.vue';
 import AplicacaoGerarView from '../views/AplicacaoGerarView.vue';
 import AplicacaoVersoesView from '../views/AplicacaoVersoesView.vue';
 import CorrecaoView from '../views/CorrecaoView.vue';
+import RelatoriosView from '../views/RelatoriosView.vue';
 
 const routes = [
     {
@@ -135,6 +137,12 @@ const routes = [
                 name: 'correction-details',
                 component: CorrecaoView,
                 meta: { title: 'Detalhes da correção' }
+            },
+            {
+                path: 'relatorios',
+                name: 'reports',
+                component: RelatoriosView,
+                meta: { title: 'Relatórios' }
             }
         ]
     },
@@ -147,8 +155,11 @@ const routes = [
         path: '/pages/questao-form.html',
         redirect: (to) => {
             const questionId = Number(to.query.id);
+
             return {
-                path: questionId > 0 ? `/questoes/${questionId}/editar` : '/questoes/nova',
+                path: questionId > 0
+                    ? `/questoes/${questionId}/editar`
+                    : '/questoes/nova',
                 query: {}
             };
         }
@@ -163,7 +174,11 @@ const routes = [
     },
     {
         path: '/pages/prova-form.html',
-        redirect: (to) => (to.query.id ? `/provas/${Number(to.query.id)}/editar` : '/provas/novo')
+        redirect: (to) => (
+            to.query.id
+                ? `/provas/${Number(to.query.id)}/editar`
+                : '/provas/novo'
+        )
     },
     {
         path: '/pages/turmas.html',
@@ -173,7 +188,10 @@ const routes = [
         path: '/pages/turma-form.html',
         redirect: (to) => {
             const classId = Number(to.query.id);
-            return classId > 0 ? `/turmas/${classId}/editar` : '/turmas/nova';
+
+            return classId > 0
+                ? `/turmas/${classId}/editar`
+                : '/turmas/nova';
         }
     },
     {

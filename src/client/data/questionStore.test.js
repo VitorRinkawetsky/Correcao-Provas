@@ -216,3 +216,100 @@ describe('validação do formulário de questão', () => {
         fetchMock.mockRestore();
     });
 });
+
+describe('integração da store com /api/questions', () => {
+    const mockFetch = (...responses) => {
+        const fetchMock = vi.spyOn(globalThis, 'fetch');
+        responses.forEach((response) => fetchMock.mockResolvedValueOnce(response));
+        return fetchMock;
+    };
+
+    it('não envia teacherId no corpo: o professor vem da autenticação', async () => {
+        const { saveQuestion } = useQuestionStore();
+        const fetchMock = mockFetch(
+            { ok: true, json: async () => ({ id: 1 }) },
+            { ok: true, json: async () => [] }
+        );
+
+        await saveQuestion(validQuestion);
+
+        const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+        expect(body).not.toHaveProperty('teacherId');
+        expect(body.correctAlternativeIndex).toBe(0);
+        expect(body.alternatives).toEqual([
+            { text: 'Organização de dados para reduzir redundâncias.' },
+            { text: 'Cópia integral de todas as tabelas.' }
+        ]);
+
+        fetchMock.mockRestore();
+    });
+
+    it('propaga a mensagem e os campos inválidos devolvidos pela API', async () => {
+        const { saveQuestion } = useQuestionStore();
+        const fetchMock = mockFetch({
+            ok: false,
+            json: async () => ({
+                error: {
+                    code: 'VALIDATION_ERROR',
+                    message: 'Dados invalidos para salvar a questao',
+                    details: [{ field: 'alternatives', message: 'Preencha todas' }]
+                }
+            })
+        });
+
+        await expect(saveQuestion(validQuestion, 7)).rejects.toMatchObject({
+            message: 'Dados invalidos para salvar a questao',
+            validationErrors: { alternatives: 'Preencha todas' }
+        });
+        expect(fetchMock.mock.calls[0][0]).toBe('/api/questions/7');
+        expect(fetchMock.mock.calls[0][1].method).toBe('PUT');
+
+        fetchMock.mockRestore();
+    });
+
+    it('carrega a alternativa correta para a edição', async () => {
+        const { loadQuestions, getQuestion } = useQuestionStore();
+        const fetchMock = mockFetch({
+            ok: true,
+            json: async () => [{
+                id: 42,
+                teacherId: 1,
+                statement: 'Questão',
+                tags: ['SQL'],
+                alternatives: [
+                    { id: 100, position: 1, text: 'A', isCorrect: false },
+                    { id: 101, position: 2, text: 'B', isCorrect: true }
+                ],
+                correctAlternativeId: 101
+            }]
+        });
+
+        await loadQuestions();
+
+        expect(getQuestion(42).correctAlternativeId).toBe(101);
+
+        fetchMock.mockRestore();
+    });
+
+    it('só remove a questão da lista depois que a API confirma a exclusão', async () => {
+        const { loadQuestions, deleteQuestion, getQuestion } = useQuestionStore();
+        const list = [{
+            id: 5, statement: 'X', tags: [], correctAlternativeId: 1,
+            alternatives: [{ id: 1, text: 'A', isCorrect: true }, { id: 2, text: 'B' }]
+        }];
+        const fetchMock = mockFetch(
+            { ok: true, json: async () => list },
+            { ok: false, json: async () => ({ error: { message: 'Falhou' } }) },
+            { ok: true, json: async () => ({ status: 'archived' }) }
+        );
+
+        await loadQuestions();
+        await expect(deleteQuestion(5)).rejects.toThrow('Falhou');
+        expect(getQuestion(5)).not.toBeNull();
+
+        await deleteQuestion(5);
+        expect(getQuestion(5)).toBeNull();
+
+        fetchMock.mockRestore();
+    });
+});
