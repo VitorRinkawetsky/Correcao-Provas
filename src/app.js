@@ -1,5 +1,8 @@
+
 const express = require('express');
 const path = require('path');
+const applicationsRoutes = require('./routes/applicationsRoutes');
+const reportsRoutes = require('./routes/reportsRoutes');
 
 
 const { checkDatabaseConnection } = require('./config/database');
@@ -8,6 +11,7 @@ const questionsRoutes = require('./routes/questionsRoutes');
 const { handleApiError } = require('./http/ApiError');
 
 const classesRoutes = require('./routes/classesRoutes');
+const applicationVersionsRoutes = require('./routes/applicationVersionsRoutes');
 
 
 const app = express();
@@ -33,6 +37,9 @@ app.get('/api/health', async (_request, response) => {
 });
 
 app.use('/api/exams', examsRoutes);
+app.use('/api/application-versions', applicationVersionsRoutes);
+app.use('/api/applications', applicationsRoutes);
+app.use('/api/reports', reportsRoutes);
 
 // Rotas de questões (substitui os endpoints inline que existiam neste arquivo)
 app.use('/api/questions', questionsRoutes);
