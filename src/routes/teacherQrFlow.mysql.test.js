@@ -39,11 +39,8 @@ const call = async (method, path, body, sessionCookie = cookie) => {
     };
 };
 
-describe('fluxo autenticado de correcao por QR (MySQL)', () => {
+describe.skipIf(!databaseAvailable)('fluxo autenticado de correcao por QR (MySQL)', () => {
     beforeAll(async () => {
-        if (!databaseAvailable) {
-            throw new Error('MySQL obrigatorio para o fluxo autenticado de correcao QR.');
-        }
         server = app.listen(0);
         await new Promise((resolve) => server.once('listening', resolve));
         baseUrl = `http://127.0.0.1:${server.address().port}`;

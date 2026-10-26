@@ -66,11 +66,8 @@ const call = async (teacherId, method, path, body) => {
     };
 };
 
-describe('API de correcoes sem aluno (MySQL)', () => {
+describe.skipIf(!databaseAvailable)('API de correcoes sem aluno (MySQL)', () => {
     beforeAll(async () => {
-        if (!databaseAvailable) {
-            throw new Error('MySQL obrigatorio para os testes de integracao de correcoes.');
-        }
         teacherA = await insert(
             'INSERT INTO professors (full_name, email) VALUES (?, ?)',
             ['Professor A Correcoes', `${RUN}-a@example.com`],

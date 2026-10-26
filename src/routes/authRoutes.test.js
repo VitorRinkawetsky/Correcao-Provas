@@ -73,11 +73,8 @@ const loginAccount = async (input, overrides = {}) => {
     return { ...response, cookie };
 };
 
-describe('API de autenticação de professores (MySQL)', () => {
+describe.skipIf(!databaseAvailable)('API de autenticação de professores (MySQL)', () => {
     beforeAll(async () => {
-        if (!databaseAvailable) {
-            throw new Error('MySQL obrigatorio para os testes de integracao de autenticacao.');
-        }
         server = buildApp().listen(0);
         await new Promise((resolve) => server.once('listening', resolve));
         baseUrl = `http://127.0.0.1:${server.address().port}`;
