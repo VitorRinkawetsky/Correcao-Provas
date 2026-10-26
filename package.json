@@ -6,6 +6,7 @@
   "scripts": {
     "build": "vite build",
     "test": "vitest run",
+    "test:mysql": "vitest run src/routes/authRoutes.test.js src/routes/correctionsRoutes.mysql.test.js src/routes/teacherQrFlow.mysql.test.js",
     "start": "node src/server.js",
     "dev": "vite",
     "dev:server": "nodemon src/server.js",
@@ -28,6 +29,7 @@
   "homepage": "https://github.com/VitorRinkawetsky/Correcao-Provas#readme",
   "dependencies": {
     "@lucide/vue": "^1.40.0",
+    "bcrypt": "^6.0.0",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "mysql2": "^3.23.3",

@@ -25,6 +25,10 @@ let stream;
 
 const correctionId = computed(() => route.params.correctionId || null);
 const isPersistedCorrection = computed(() => Boolean(correctionId.value));
+const applicationId = computed(() => {
+    const id = Number(route.params.id || context.value?.applicationId);
+    return Number.isSafeInteger(id) && id > 0 ? id : null;
+});
 const totalScore = computed(() => (
     context.value?.questions?.reduce(
         (total, question) => total + Number(question.awardedScore || 0),
@@ -36,6 +40,26 @@ const isCameraSupported = computed(() => (
     'BarcodeDetector' in window
     && !!navigator.mediaDevices?.getUserMedia
 ));
+
+function goToApplication() {
+    router.push(applicationId.value
+        ? { name: 'application-details', params: { id: applicationId.value } }
+        : { name: 'applications' });
+}
+
+function goToCorrectionList() {
+    router.push({
+        name: 'application-corrections-list',
+        params: { id: applicationId.value }
+    });
+}
+
+function goToPendingCorrections() {
+    router.push({
+        name: 'application-unidentified-corrections',
+        params: { id: applicationId.value }
+    });
+}
 
 function stopScanner() {
     scanning.value = false;
@@ -135,13 +159,15 @@ async function submitCorrection() {
     message.value = '';
     try {
         const payload = {
-            qrCodePayload: code.value,
+            ...(!isPersistedCorrection.value ? { qrCodePayload: code.value } : {}),
             studentName: studentName.value,
             studentRegistration: studentRegistration.value,
             notes: context.value?.notes || '',
-            answers: Object.entries(answers.value).map(([questionId, selectedAlternativeId]) => ({
-                questionId: Number(questionId),
-                selectedAlternativeId: Number(selectedAlternativeId)
+            answers: context.value.questions.map((question) => ({
+                questionId: Number(question.questionId),
+                selectedAlternativeId: answers.value[question.questionId] == null
+                    ? null
+                    : Number(answers.value[question.questionId])
             }))
         };
         const result = isPersistedCorrection.value
@@ -169,7 +195,7 @@ onBeforeUnmount(stopScanner);
 
 <template>
     <section class="pagina">
-        <button class="voltar" @click="router.push({ name: 'application-details', params: { id: route.params.id } })">
+        <button class="voltar" @click="goToApplication">
             ← Voltar aos detalhes
         </button>
         <div class="card">
@@ -179,6 +205,14 @@ onBeforeUnmount(stopScanner);
                     ? 'Revise as respostas e ajuste a correcao persistida.'
                     : 'Leia o QR Code da prova ou informe o codigo manualmente.' }}
             </p>
+            <div v-if="applicationId" class="atalhos-correcao">
+                <button class="btn btn-secondary" type="button" @click="goToCorrectionList">
+                    Histórico de correções
+                </button>
+                <button class="btn btn-secondary" type="button" @click="goToPendingCorrections">
+                    Correções sem aluno
+                </button>
+            </div>
 
             <video v-show="scanning" ref="video" class="camera" aria-label="Leitor de QR Code"></video>
             <div v-if="!isPersistedCorrection" class="acoes">
@@ -188,7 +222,7 @@ onBeforeUnmount(stopScanner);
                 <button v-if="scanning" class="btn btn-secondary" @click="stopScanner">Parar camera</button>
             </div>
 
-            <form class="codigo-form" @submit.prevent="loadContext">
+            <form v-if="!isPersistedCorrection" class="codigo-form" @submit.prevent="loadContext">
                 <label for="codigo-prova">Codigo da prova</label>
                 <div class="linha">
                     <input id="codigo-prova" v-model="code" required placeholder="Cole o codigo do QR Code">
@@ -252,6 +286,7 @@ onBeforeUnmount(stopScanner);
 .voltar { border: 0; background: none; color: var(--color-primary, #0f5e56); cursor: pointer; margin-bottom: 16px; font-size: 1rem; }
 .card { background: var(--color-surface, #fff); border-radius: var(--radius-md, 8px); padding: 24px; display: flex; flex-direction: column; gap: 16px; }
 .subtitulo { color: var(--color-text-muted, #6b7280); }
+.atalhos-correcao { display: flex; flex-wrap: wrap; gap: 12px; }
 .camera { width: min(100%, 480px); min-height: 220px; background: #111; border-radius: 8px; object-fit: cover; }
 .acoes, .linha { display: flex; gap: 12px; align-items: center; }
 .codigo-form, .identificacao label { display: flex; flex-direction: column; gap: 6px; }

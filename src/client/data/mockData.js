@@ -464,29 +464,7 @@ export const corrections = [
     }
 ];
 
-export const statusLabels = {
-    ready: 'Pronta',
-    draft: 'Rascunho',
-    closed: 'Encerrada',
-    generated: 'PDF gerado',
-    active: 'Ativa',
-    archived: 'Arquivada',
-    synced: 'Sincronizada',
-    pending: 'Pendente',
-    error: 'Erro'
-};
-
-export const statusTones = {
-    ready: 'success',
-    generated: 'success',
-    active: 'success',
-    synced: 'success',
-    draft: 'neutral',
-    pending: 'warning',
-    error: 'danger',
-    closed: 'muted',
-    archived: 'muted'
-};
+export { statusLabels, statusTones } from './statusCatalog';
 
 export const getProfessorById = (id) => professors.find((professor) => professor.id === Number(id));
 export const getStudentById = (id) => students.find((student) => student.id === Number(id));

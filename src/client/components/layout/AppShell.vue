@@ -1,6 +1,29 @@
 <script setup>
-import { BookOpenCheck, GraduationCap, Home, ListChecks, Users } from '@lucide/vue';
-import { RouterLink, RouterView } from 'vue-router';
+import { BookOpenCheck, GraduationCap, Home, ListChecks, LogOut, Users } from '@lucide/vue';
+import { ref } from 'vue';
+import { RouterLink, RouterView, useRouter } from 'vue-router';
+
+import { useAuthStore } from '../../data/authStore';
+
+const auth = useAuthStore();
+const router = useRouter();
+const isLoggingOut = ref(false);
+const logoutError = ref('');
+
+const handleLogout = async () => {
+    if (isLoggingOut.value) return;
+
+    isLoggingOut.value = true;
+    logoutError.value = '';
+    try {
+        await auth.logout();
+        await router.replace({ name: 'login' });
+    } catch (error) {
+        logoutError.value = error.message || 'Não foi possível sair.';
+    } finally {
+        isLoggingOut.value = false;
+    }
+};
 </script>
 
 <template>
@@ -37,7 +60,27 @@ import { RouterLink, RouterView } from 'vue-router';
                         <span>Banco de questões</span>
                     </RouterLink>
                 </nav>
+
+                <div class="teacher-account">
+                    <span class="teacher-account__identity">
+                        <strong>{{ auth.state.professor?.fullName }}</strong>
+                        <small>{{ auth.state.professor?.email }}</small>
+                    </span>
+                    <button
+                        class="teacher-account__logout"
+                        type="button"
+                        :disabled="isLoggingOut"
+                        :aria-label="isLoggingOut ? 'Saindo da conta' : 'Sair da conta'"
+                        @click="handleLogout"
+                    >
+                        <LogOut :size="18" aria-hidden="true" />
+                        <span>{{ isLoggingOut ? 'Saindo...' : 'Sair' }}</span>
+                    </button>
+                </div>
             </div>
+            <p v-if="logoutError" class="site-header__error" role="alert">
+                {{ logoutError }}
+            </p>
         </header>
 
         <main id="conteudo-principal" class="site-main">

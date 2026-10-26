@@ -60,6 +60,24 @@ function abrirCorrecoes() {
   })
 }
 
+function abrirHistoricoCorrecoes() {
+  if (!aplicacao.value?.id) return
+
+  router.push({
+    name: 'application-corrections-list',
+    params: { id: aplicacao.value.id }
+  })
+}
+
+function abrirCorrecoesSemAluno() {
+  if (!aplicacao.value?.id) return
+
+  router.push({
+    name: 'application-unidentified-corrections',
+    params: { id: aplicacao.value.id }
+  })
+}
+
 function abrirResultados() {
   console.log('Integração de resultados pendente')
 }
@@ -113,7 +131,15 @@ function abrirResultados() {
         </button>
 
         <button type="button" @click="abrirCorrecoes">
-          Correções
+          Corrigir por QR Code
+        </button>
+
+        <button type="button" @click="abrirHistoricoCorrecoes">
+          Histórico de correções
+        </button>
+
+        <button type="button" @click="abrirCorrecoesSemAluno">
+          Correções sem aluno
         </button>
 
         <button type="button" @click="abrirResultados">
