@@ -108,6 +108,8 @@ describe('tela de correcoes', () => {
         expect(wrapper.text()).toContain('20260042');
         expect(wrapper.text()).toContain('1,25');
         expect(wrapper.text()).toContain('Confirmada');
+        expect(wrapper.get('[data-route-name="application-corrections"]'))
+            .toBeTruthy();
         expect(wrapper.get('[data-route-name="application-unidentified-corrections"]'))
             .toBeTruthy();
     });

@@ -13,7 +13,7 @@ export const getVersionQuestions = (versionId) =>
     requestJson(`/api/corrections/versions/${versionId}/questions`);
 
 export const createCorrection = (payload) =>
-    requestJson('/api/corrections', {
+    requestJson('/api/corrections/manual', {
         method: 'POST',
         body: JSON.stringify(payload)
     });

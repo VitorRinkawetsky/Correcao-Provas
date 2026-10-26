@@ -28,7 +28,7 @@ beforeEach(() => {
 });
 
 describe('detalhes da aplicacao', () => {
-    it('abre a tela principal de correcoes da aplicacao atual', async () => {
+    it('separa correcao por QR, historico e pendencias sem aluno', async () => {
         const wrapper = mount(AplicacaoDetalhesView, {
             global: {
                 stubs: { RouterLink: { template: '<a><slot /></a>' } }
@@ -36,15 +36,21 @@ describe('detalhes da aplicacao', () => {
         });
         await flushPromises();
 
-        const button = wrapper.findAll('button')
-            .find((item) => item.text() === 'Correções');
-        expect(button).toBeDefined();
+        const expectations = [
+            ['Corrigir por QR Code', 'application-corrections'],
+            ['Histórico de correções', 'application-corrections-list'],
+            ['Correções sem aluno', 'application-unidentified-corrections']
+        ];
 
-        await button.trigger('click');
-
-        expect(push).toHaveBeenCalledWith({
-            name: 'application-corrections',
-            params: { id: 9 }
-        });
+        for (const [label, routeName] of expectations) {
+            const button = wrapper.findAll('button')
+                .find((item) => item.text() === label);
+            expect(button).toBeDefined();
+            await button.trigger('click');
+            expect(push).toHaveBeenLastCalledWith({
+                name: routeName,
+                params: { id: 9 }
+            });
+        }
     });
 });

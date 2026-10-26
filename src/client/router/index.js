@@ -16,6 +16,7 @@ import AplicacaoFormView from '../views/AplicacaoFormView.vue';
 import AplicacaoDetalhesView from '../views/AplicacaoDetalhesView.vue';
 import AplicacaoGerarView from '../views/AplicacaoGerarView.vue';
 import AplicacaoVersoesView from '../views/AplicacaoVersoesView.vue';
+import CorrecaoView from '../views/CorrecaoView.vue';
 import CorrecoesView from '../views/CorrecoesView.vue';
 import CorrecoesSemAlunoView from '../views/CorrecoesSemAlunoView.vue';
 import RelatoriosView from '../views/RelatoriosView.vue';
@@ -134,8 +135,8 @@ const routes = [
                 meta: { title: 'Gerar aplicação' }
             },
             {
-                path: 'aplicacoes/:id/correcoes',
-                name: 'application-corrections',
+                path: 'aplicacoes/:id/correcoes/lista',
+                name: 'application-corrections-list',
                 component: CorrecoesView,
                 meta: { title: 'Correções' }
             },
@@ -156,6 +157,18 @@ const routes = [
                 name: 'application-details',
                 component: AplicacaoDetalhesView,
                 meta: { title: 'Detalhes da aplicação' }
+            },
+            {
+                path: 'aplicacoes/:id/correcoes',
+                name: 'application-corrections',
+                component: CorrecaoView,
+                meta: { title: 'Corrigir prova' }
+            },
+            {
+                path: 'correcoes/:correctionId',
+                name: 'correction-details',
+                component: CorrecaoView,
+                meta: { title: 'Detalhes da correção' }
             },
             {
                 path: 'relatorios',

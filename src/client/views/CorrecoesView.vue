@@ -222,15 +222,23 @@ watch(applicationId, loadPage, { immediate: true });
                 <h1>Correções</h1>
                 <p>Consulte as notas e registre respostas usando o gabarito da versão.</p>
             </div>
-            <RouterLink
-                :to="{
-                    name: 'application-unidentified-corrections',
-                    params: { id: applicationId }
-                }"
-                class="button button--secondary"
-            >
-                Ver correções sem aluno
-            </RouterLink>
+            <div class="corrections-page__actions">
+                <RouterLink
+                    :to="{ name: 'application-corrections', params: { id: applicationId } }"
+                    class="button button--primary"
+                >
+                    Corrigir por QR Code
+                </RouterLink>
+                <RouterLink
+                    :to="{
+                        name: 'application-unidentified-corrections',
+                        params: { id: applicationId }
+                    }"
+                    class="button button--secondary"
+                >
+                    Ver correções sem aluno
+                </RouterLink>
+            </div>
         </header>
 
         <p v-if="isLoading" role="status">Carregando correções...</p>
@@ -512,6 +520,13 @@ watch(applicationId, loadPage, { immediate: true });
     gap: var(--space-5);
 }
 
+.corrections-page__actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: var(--space-3);
+}
+
 .corrections-page__header h1,
 .correction-panel h2,
 .corrections-state h3 {
@@ -739,7 +754,8 @@ watch(applicationId, loadPage, { immediate: true });
     }
 
     .correction-form > .button,
-    .corrections-page__header > .button {
+    .corrections-page__actions,
+    .corrections-page__actions > .button {
         width: 100%;
     }
 }

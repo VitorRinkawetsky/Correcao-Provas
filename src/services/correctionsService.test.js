@@ -84,6 +84,27 @@ const creationPayload = (overrides = {}) => ({
 const createHarness = (overrides = {}) => {
     const repository = {
         findOwnedApplication: vi.fn().mockResolvedValue({ id: 9, classId: 4 }),
+        findCorrectionContext: vi.fn().mockResolvedValue({
+            applicationId: 9,
+            examVersionId: 12,
+            assignmentId: 55,
+            assignedStudentId: 31,
+            assignedStudentName: 'Ana Souza',
+            assignedStudentRegistration: '20260042',
+            questions: [{
+                questionId: 101,
+                alternatives: [
+                    { id: 1001 },
+                    { id: 1002 }
+                ]
+            }]
+        }),
+        findQrAnswerKey: vi.fn().mockResolvedValue([{
+            questionId: 101,
+            correctAlternativeId: 1001,
+            score: 1.25
+        }]),
+        insertQrCorrection: vi.fn().mockResolvedValue(91),
         listCorrections: vi.fn().mockResolvedValue([correction({ studentId: 31 })]),
         listVersions: vi.fn().mockResolvedValue([{ id: 12, versionNumber: 1 }]),
         listPending: vi.fn().mockResolvedValue([correction()]),
@@ -108,12 +129,27 @@ const createHarness = (overrides = {}) => {
         findAssociationConflict: vi.fn().mockResolvedValue(null),
         insertCorrection: vi.fn().mockResolvedValue(88),
         insertCorrectionAnswers: vi.fn().mockResolvedValue(2),
-        findCorrectionById: vi.fn().mockResolvedValue(correction({
+        findCorrectionSummaryById: vi.fn().mockResolvedValue(correction({
             id: 88,
             studentId: 31,
             examAssignmentId: 55,
             totalScore: 1.25
         })),
+        findCorrectionById: vi.fn().mockResolvedValue({
+            id: 91,
+            studentId: 31,
+            studentName: 'Ana Souza',
+            studentRegistration: '20260042',
+            questions: [{
+                questionId: 101,
+                score: 1.25,
+                alternatives: [
+                    { id: 1001, isCorrect: true },
+                    { id: 1002, isCorrect: false }
+                ]
+            }]
+        }),
+        updateCorrection: vi.fn().mockResolvedValue(undefined),
         updateAssociation: vi.fn().mockResolvedValue(1),
         ...overrides
     };
@@ -140,6 +176,162 @@ const createHarness = (overrides = {}) => {
         service: createCorrectionsService({ repository, database })
     };
 };
+
+describe('servico de correcao por QR Code', () => {
+    beforeEach(() => vi.clearAllMocks());
+
+    it('busca o contexto somente no escopo do professor autenticado', async () => {
+        const { repository, service } = createHarness();
+
+        const result = await service.getContext('  QR-ABC  ', 7);
+
+        expect(result.examVersionId).toBe(12);
+        expect(repository.findCorrectionContext).toHaveBeenCalledWith('QR-ABC', 7);
+    });
+
+    it('calcula e persiste a correcao QR na mesma transacao', async () => {
+        const { repository, service, transaction, transactionState } = createHarness();
+
+        const result = await service.correct(7, {
+            qrCodePayload: 'QR-ABC',
+            answers: [{ questionId: 101, selectedAlternativeId: 1001 }]
+        });
+
+        expect(repository.findQrAnswerKey).toHaveBeenCalledWith(9, 12, transaction);
+        expect(repository.insertQrCorrection).toHaveBeenCalledWith({
+            assignmentId: 55,
+            examVersionId: 12,
+            studentId: 31,
+            studentName: 'Ana Souza',
+            studentRegistration: '20260042',
+            totalScore: 1.25,
+            answers: [{
+                questionId: 101,
+                selectedAlternativeId: 1001,
+                isCorrect: true,
+                awardedScore: 1.25
+            }],
+            teacherId: 7,
+            notes: null
+        }, transaction);
+        expect(result).toMatchObject({ id: 91, totalScore: 1.25 });
+        expect(transactionState).toEqual({ committed: true, rolledBack: false });
+    });
+
+    it('nao revela contexto QR pertencente a outro professor', async () => {
+        const { service } = createHarness({
+            findCorrectionContext: vi.fn().mockResolvedValue(null)
+        });
+
+        await expect(service.getContext('QR-ALHEIO', 7)).rejects.toMatchObject({
+            status: 404,
+            code: 'INVALID_QR_CODE'
+        });
+    });
+
+    it('rejeita campos de autoridade, respostas duplicadas e questoes alheias no QR', async () => {
+        const authority = createHarness();
+        await expect(authority.service.correct(7, {
+            qrCodePayload: 'QR-ABC',
+            teacherId: 99,
+            answers: []
+        })).rejects.toMatchObject({ status: 400, code: 'VALIDATION_ERROR' });
+        expect(authority.repository.findCorrectionContext).not.toHaveBeenCalled();
+        expect(authority.database.withTransaction).not.toHaveBeenCalled();
+
+        const invalidAnswers = createHarness();
+        await expect(invalidAnswers.service.correct(7, {
+            qrCodePayload: 'QR-ABC',
+            answers: [
+                { questionId: 101, selectedAlternativeId: 1001 },
+                { questionId: 101, selectedAlternativeId: 1002 },
+                { questionId: 999, selectedAlternativeId: 1001 }
+            ]
+        })).rejects.toMatchObject({ status: 400, code: 'VALIDATION_ERROR' });
+        expect(invalidAnswers.database.withTransaction).not.toHaveBeenCalled();
+    });
+
+    it('valida estritamente a edicao antes de substituir as respostas', async () => {
+        const invalidBodies = [
+            {
+                studentName: 'Ana Souza',
+                studentRegistration: '20260042',
+                notes: null,
+                answers: [],
+                teacherId: 99
+            },
+            {
+                studentName: 'Ana Souza',
+                studentRegistration: '20260042',
+                notes: null,
+                answers: {}
+            },
+            {
+                studentName: 'Ana Souza',
+                studentRegistration: '20260042',
+                notes: null,
+                answers: [{ questionId: 101, selectedAlternativeId: '1001' }]
+            },
+            {
+                studentName: 'Ana Souza',
+                studentRegistration: '20260042',
+                notes: null,
+                answers: []
+            },
+            {
+                studentName: 'Ana Souza',
+                studentRegistration: '20260042',
+                notes: null,
+                answers: [
+                    { questionId: 101, selectedAlternativeId: 1001 },
+                    { questionId: 101, selectedAlternativeId: 1002 }
+                ]
+            },
+            {
+                studentName: 'Ana Souza',
+                studentRegistration: '20260042',
+                notes: null,
+                answers: [{ questionId: 999, selectedAlternativeId: 1001 }]
+            }
+        ];
+
+        for (const body of invalidBodies) {
+            const { database, repository, service } = createHarness();
+            await expect(service.update(91, 7, body)).rejects.toMatchObject({
+                status: 400,
+                code: 'VALIDATION_ERROR'
+            });
+            expect(database.withTransaction).not.toHaveBeenCalled();
+            expect(repository.updateCorrection).not.toHaveBeenCalled();
+        }
+    });
+
+    it('substitui uma resposta QR valida dentro de transacao', async () => {
+        const { database, repository, service, transaction } = createHarness();
+
+        await service.update(91, 7, {
+            studentName: 'Ana Souza',
+            studentRegistration: '20260042',
+            notes: 'Revisada',
+            answers: [{ questionId: 101, selectedAlternativeId: 1002 }]
+        });
+
+        expect(database.withTransaction).toHaveBeenCalledOnce();
+        expect(repository.updateCorrection).toHaveBeenCalledWith(91, {
+            teacherId: 7,
+            studentName: 'Ana Souza',
+            studentRegistration: '20260042',
+            totalScore: 0,
+            notes: 'Revisada',
+            answers: [{
+                questionId: 101,
+                selectedAlternativeId: 1002,
+                isCorrect: false,
+                awardedScore: 0
+            }]
+        }, transaction);
+    });
+});
 
 describe('servico da tela de correcoes', () => {
     beforeEach(() => vi.clearAllMocks());
@@ -218,7 +410,11 @@ describe('servico da tela de correcoes', () => {
                 awardedScore: 0
             }
         ], transaction);
-        expect(repository.findCorrectionById).toHaveBeenCalledWith(88, 7, transaction);
+        expect(repository.findCorrectionSummaryById).toHaveBeenCalledWith(
+            88,
+            7,
+            transaction
+        );
         expect(result.id).toBe(88);
         expect(transactionState).toEqual({ committed: true, rolledBack: false });
     });

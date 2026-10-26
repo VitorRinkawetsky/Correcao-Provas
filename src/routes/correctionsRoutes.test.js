@@ -1,12 +1,19 @@
 import express from 'express';
+import { createRequire } from 'node:module';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { ApiError } from '../http/ApiError';
 import correctionsRoutes from './correctionsRoutes';
+
+const nodeRequire = createRequire(import.meta.url);
+const { ApiError } = nodeRequire('../http/ApiError.js');
 
 const { createCorrectionsRouter } = correctionsRoutes;
 
 const service = {
+    getContext: vi.fn(),
+    correct: vi.fn(),
+    getCorrection: vi.fn(),
+    update: vi.fn(),
     listCorrections: vi.fn(),
     getFormOptions: vi.fn(),
     getVersionQuestions: vi.fn(),
@@ -54,6 +61,10 @@ afterAll(async () => {
 
 beforeEach(() => {
     vi.clearAllMocks();
+    service.getContext.mockResolvedValue({ examVersionId: 12 });
+    service.correct.mockResolvedValue({ id: 91, totalScore: 7.5 });
+    service.getCorrection.mockResolvedValue({ id: 91, totalScore: 7.5 });
+    service.update.mockResolvedValue({ id: 91, totalScore: 8 });
     service.listCorrections.mockResolvedValue([{ id: 88 }]);
     service.getFormOptions.mockResolvedValue({ versions: [], students: [] });
     service.getVersionQuestions.mockResolvedValue({ versionId: 12, questions: [] });
@@ -75,7 +86,7 @@ describe('rotas de correcoes sem aluno', () => {
             notes: null,
             answers: [{ questionId: 101, selectedAlternativeId: 1001 }]
         };
-        const created = await call('POST', '/', payload);
+        const created = await call('POST', '/manual', payload);
 
         expect(listed).toEqual({
             status: 200,
@@ -94,6 +105,39 @@ describe('rotas de correcoes sem aluno', () => {
         expect(service.getFormOptions).toHaveBeenCalledWith(7, '9');
         expect(service.getVersionQuestions).toHaveBeenCalledWith(7, '12');
         expect(service.createCorrection).toHaveBeenCalledWith(7, payload);
+    });
+
+    it('preserva contexto, criacao, detalhe e edicao por QR Code', async () => {
+        const qrPayload = {
+            qrCodePayload: 'QR-ABC',
+            studentName: 'Ana',
+            studentRegistration: '20260042',
+            answers: []
+        };
+        const updatePayload = {
+            studentName: 'Ana',
+            studentRegistration: '20260042',
+            notes: 'Revisada',
+            answers: []
+        };
+
+        const context = await call('GET', '/context?code=QR-ABC');
+        const created = await call('POST', '/', qrPayload);
+        const details = await call('GET', '/91');
+        const updated = await call('PUT', '/91', updatePayload);
+
+        expect(context.status).toBe(200);
+        expect(created.status).toBe(201);
+        expect(details.status).toBe(200);
+        expect(updated.status).toBe(200);
+        expect(service.getContext).toHaveBeenCalledWith('QR-ABC', 7);
+        expect(service.correct).toHaveBeenCalledWith(7, qrPayload);
+        expect(service.getCorrection).toHaveBeenCalledWith('91', 7);
+        expect(service.update).toHaveBeenCalledWith(
+            '91',
+            7,
+            updatePayload
+        );
     });
 
     it('lista pendencias e alunos no escopo do professor autenticado', async () => {

@@ -1,11 +1,14 @@
 import bcrypt from 'bcrypt';
 import express from 'express';
+import { createRequire } from 'node:module';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import database from '../config/database';
-import { handleApiError } from '../http/ApiError';
 import requireTeacherSession from '../middlewares/requireTeacherSession';
 import authRoutes from './authRoutes';
+
+const nodeRequire = createRequire(import.meta.url);
+const { handleApiError } = nodeRequire('../http/ApiError.js');
 
 const { pool, closeDatabaseConnection } = database;
 const databaseAvailable = await pool.query('SELECT 1').then(() => true, () => false);

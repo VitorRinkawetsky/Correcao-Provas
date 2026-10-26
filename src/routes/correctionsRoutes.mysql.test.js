@@ -38,6 +38,9 @@ let creationQuestionA;
 let creationQuestionB;
 let correctAlternativeA;
 let wrongAlternativeB;
+let correctAlternativeB;
+let qrVersion;
+let qrAssignment;
 let server;
 let baseUrl;
 
@@ -63,8 +66,11 @@ const call = async (teacherId, method, path, body) => {
     };
 };
 
-describe.skipIf(!databaseAvailable)('API de correcoes sem aluno (MySQL)', () => {
+describe('API de correcoes sem aluno (MySQL)', () => {
     beforeAll(async () => {
+        if (!databaseAvailable) {
+            throw new Error('MySQL obrigatorio para os testes de integracao de correcoes.');
+        }
         teacherA = await insert(
             'INSERT INTO professors (full_name, email) VALUES (?, ?)',
             ['Professor A Correcoes', `${RUN}-a@example.com`],
@@ -200,13 +206,22 @@ describe.skipIf(!databaseAvailable)('API de correcoes sem aluno (MySQL)', () => 
             [applicationA, `${RUN}-a-v3`, `${RUN}-a-v3-qr`],
             'versions'
         );
+        qrVersion = await insert(
+            `INSERT INTO exam_versions
+                (application_id, version_number, public_code, qr_code_payload)
+             VALUES (?, 4, ?, ?)`,
+            [applicationA, `${RUN}-a-v4`, `${RUN}-a-v4-qr`],
+            'versions'
+        );
         await pool.query(
             `INSERT INTO exam_version_questions
                 (exam_version_id, question_id, printed_order)
-             VALUES (?, ?, 1), (?, ?, 2)`,
+             VALUES (?, ?, 1), (?, ?, 2), (?, ?, 1), (?, ?, 2)`,
             [
                 versionForCreation, creationQuestionA,
-                versionForCreation, creationQuestionB
+                versionForCreation, creationQuestionB,
+                qrVersion, creationQuestionA,
+                qrVersion, creationQuestionB
             ]
         );
         const [[correctA], [wrongA], [wrongB], [correctB]] = await Promise.all([
@@ -227,15 +242,22 @@ describe.skipIf(!databaseAvailable)('API de correcoes sem aluno (MySQL)', () => 
                 [creationQuestionB]
             )
         ]);
+        correctAlternativeB = correctB[0].id;
         await pool.query(
             `INSERT INTO exam_version_alternatives
                 (exam_version_id, question_id, alternative_id, printed_order)
-             VALUES (?, ?, ?, 1), (?, ?, ?, 2), (?, ?, ?, 1), (?, ?, ?, 2)`,
+             VALUES
+                (?, ?, ?, 1), (?, ?, ?, 2), (?, ?, ?, 1), (?, ?, ?, 2),
+                (?, ?, ?, 1), (?, ?, ?, 2), (?, ?, ?, 1), (?, ?, ?, 2)`,
             [
                 versionForCreation, creationQuestionA, correctA[0].id,
                 versionForCreation, creationQuestionA, wrongA[0].id,
                 versionForCreation, creationQuestionB, wrongB[0].id,
-                versionForCreation, creationQuestionB, correctB[0].id
+                versionForCreation, creationQuestionB, correctB[0].id,
+                qrVersion, creationQuestionA, correctA[0].id,
+                qrVersion, creationQuestionA, wrongA[0].id,
+                qrVersion, creationQuestionB, wrongB[0].id,
+                qrVersion, creationQuestionB, correctB[0].id
             ]
         );
 
@@ -255,6 +277,12 @@ describe.skipIf(!databaseAvailable)('API de correcoes sem aluno (MySQL)', () => 
             `INSERT INTO exam_assignments (exam_version_id, student_id, qr_code_payload)
              VALUES (?, ?, ?)`,
             [versionForCreation, studentA, `${RUN}-assignment-creation`],
+            'assignments'
+        );
+        qrAssignment = await insert(
+            `INSERT INTO exam_assignments (exam_version_id, student_id, qr_code_payload)
+             VALUES (?, ?, ?)`,
+            [qrVersion, studentA, `${RUN}-assignment-qr`],
             'assignments'
         );
 
@@ -300,34 +328,42 @@ describe.skipIf(!databaseAvailable)('API de correcoes sem aluno (MySQL)', () => 
     });
 
     afterAll(async () => {
-        if (server) await new Promise((resolve) => server.close(resolve));
-        if (ids.corrections.length) {
-            await pool.query('DELETE FROM corrections WHERE id IN (?)', [ids.corrections]);
+        try {
+            if (ids.corrections.length) {
+                await pool.query('DELETE FROM corrections WHERE id IN (?)', [ids.corrections]);
+            }
+            if (ids.assignments.length) {
+                await pool.query('DELETE FROM exam_assignments WHERE id IN (?)', [ids.assignments]);
+            }
+            if (ids.versions.length) {
+                await pool.query('DELETE FROM exam_versions WHERE id IN (?)', [ids.versions]);
+            }
+            if (ids.applications.length) {
+                await pool.query('DELETE FROM applications WHERE id IN (?)', [ids.applications]);
+            }
+            if (ids.exams.length) {
+                await pool.query('DELETE FROM exams WHERE id IN (?)', [ids.exams]);
+            }
+            if (ids.questions.length) {
+                await pool.query('DELETE FROM questions WHERE id IN (?)', [ids.questions]);
+            }
+            if (ids.classes.length) {
+                await pool.query('DELETE FROM class_students WHERE class_id IN (?)', [ids.classes]);
+                await pool.query('DELETE FROM classes WHERE id IN (?)', [ids.classes]);
+            }
+            if (ids.students.length) {
+                await pool.query('DELETE FROM students WHERE id IN (?)', [ids.students]);
+            }
+            if (ids.professors.length) {
+                await pool.query('DELETE FROM professors WHERE id IN (?)', [ids.professors]);
+            }
+        } finally {
+            try {
+                if (server) await new Promise((resolve) => server.close(resolve));
+            } finally {
+                await closeDatabaseConnection();
+            }
         }
-        if (ids.assignments.length) {
-            await pool.query('DELETE FROM exam_assignments WHERE id IN (?)', [ids.assignments]);
-        }
-        if (ids.versions.length) {
-            await pool.query('DELETE FROM exam_versions WHERE id IN (?)', [ids.versions]);
-        }
-        if (ids.applications.length) {
-            await pool.query('DELETE FROM applications WHERE id IN (?)', [ids.applications]);
-        }
-        if (ids.exams.length) await pool.query('DELETE FROM exams WHERE id IN (?)', [ids.exams]);
-        if (ids.questions.length) {
-            await pool.query('DELETE FROM questions WHERE id IN (?)', [ids.questions]);
-        }
-        if (ids.classes.length) {
-            await pool.query('DELETE FROM class_students WHERE class_id IN (?)', [ids.classes]);
-            await pool.query('DELETE FROM classes WHERE id IN (?)', [ids.classes]);
-        }
-        if (ids.students.length) {
-            await pool.query('DELETE FROM students WHERE id IN (?)', [ids.students]);
-        }
-        if (ids.professors.length) {
-            await pool.query('DELETE FROM professors WHERE id IN (?)', [ids.professors]);
-        }
-        await closeDatabaseConnection();
     });
 
     it('lista somente pendencias e alunos ativos da aplicacao do professor', async () => {
@@ -366,7 +402,7 @@ describe.skipIf(!databaseAvailable)('API de correcoes sem aluno (MySQL)', () => 
             'GET',
             `/?applicationId=${applicationA}`
         );
-        const foreignCreate = await call(teacherB, 'POST', '/', {
+        const foreignCreate = await call(teacherB, 'POST', '/manual', {
             examVersionId: versionForCreation,
             studentId: studentA,
             status: 'confirmed',
@@ -388,6 +424,63 @@ describe.skipIf(!databaseAvailable)('API de correcoes sem aluno (MySQL)', () => 
         expect(foreignQuestions.status).toBe(404);
         expect(foreignList.status).toBe(404);
         expect(foreignCreate.status).toBe(404);
+    });
+
+    it('le o QR Code e persiste, consulta e atualiza a correcao no MySQL', async () => {
+        const code = `${RUN}-assignment-qr`;
+        const context = await call(teacherA, 'GET', `/context?code=${encodeURIComponent(code)}`);
+
+        expect(context.status).toBe(200);
+        expect(context.body.data).toMatchObject({
+            examVersionId: qrVersion,
+            assignmentId: qrAssignment,
+            assignedStudentId: studentA,
+            assignedStudentRegistration: `${RUN}-001`
+        });
+        expect(JSON.stringify(context.body)).not.toContain('isCorrect');
+
+        const created = await call(teacherA, 'POST', '/', {
+            qrCodePayload: code,
+            answers: [
+                { questionId: creationQuestionA, selectedAlternativeId: correctAlternativeA },
+                { questionId: creationQuestionB, selectedAlternativeId: wrongAlternativeB }
+            ]
+        });
+
+        expect(created.status).toBe(201);
+        expect(created.body.data).toMatchObject({
+            examVersionId: qrVersion,
+            studentRegistration: `${RUN}-001`,
+            totalScore: 1.25
+        });
+        ids.corrections.push(created.body.data.id);
+
+        const details = await call(teacherA, 'GET', `/${created.body.data.id}`);
+        expect(details.status).toBe(200);
+        expect(details.body.data).toMatchObject({
+            id: created.body.data.id,
+            applicationId: applicationA,
+            assignmentId: qrAssignment,
+            studentId: studentA,
+            totalScore: 1.25
+        });
+
+        const updated = await call(teacherA, 'PUT', `/${created.body.data.id}`, {
+            studentName: 'Ana Teste',
+            studentRegistration: `${RUN}-001`,
+            notes: 'Revisada pelo fluxo QR',
+            answers: [
+                { questionId: creationQuestionA, selectedAlternativeId: correctAlternativeA },
+                { questionId: creationQuestionB, selectedAlternativeId: correctAlternativeB }
+            ]
+        });
+
+        expect(updated.status).toBe(200);
+        expect(updated.body.data).toMatchObject({
+            id: created.body.data.id,
+            totalScore: 3.75,
+            notes: 'Revisada pelo fluxo QR'
+        });
     });
 
     it('faz rollback real quando a insercao das respostas falha depois do cabecalho', async () => {
@@ -423,7 +516,7 @@ describe.skipIf(!databaseAvailable)('API de correcoes sem aluno (MySQL)', () => 
     });
 
     it('calcula e persiste cabecalho e respostas, sem aceitar alternativa fora da versao', async () => {
-        const invalid = await call(teacherA, 'POST', '/', {
+        const invalid = await call(teacherA, 'POST', '/manual', {
             examVersionId: versionForCreation,
             studentId: studentA,
             status: 'confirmed',
@@ -442,7 +535,7 @@ describe.skipIf(!databaseAvailable)('API de correcoes sem aluno (MySQL)', () => 
         );
         expect(before.total).toBe(0);
 
-        const created = await call(teacherA, 'POST', '/', {
+        const created = await call(teacherA, 'POST', '/manual', {
             examVersionId: versionForCreation,
             studentId: studentA,
             status: 'confirmed',
@@ -499,8 +592,8 @@ describe.skipIf(!databaseAvailable)('API de correcoes sem aluno (MySQL)', () => 
             ]
         };
         const responses = await Promise.all([
-            call(teacherA, 'POST', '/', payload),
-            call(teacherA, 'POST', '/', payload)
+            call(teacherA, 'POST', '/manual', payload),
+            call(teacherA, 'POST', '/manual', payload)
         ]);
 
         expect(responses.map((response) => response.status).sort()).toEqual([201, 409]);

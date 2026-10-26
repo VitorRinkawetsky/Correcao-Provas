@@ -263,6 +263,17 @@ A API usa exclusivamente a identidade do professor autenticado pelo cookie de
 sessão. Crie uma conta em `#/cadastro` e entre por `#/login`; identificadores em
 corpo, query string ou cabeçalho não substituem a sessão.
 
+O professor incluído no seed (`carlos.silva@catolicasc.org.br`) existe apenas
+para relacionar os dados acadêmicos de exemplo e não possui senha. Portanto, o
+primeiro acesso deve ser feito pelo cadastro de uma nova conta de professor.
+Alunos permanecem somente como registros das turmas e não podem autenticar.
+
+Na tela de detalhes de uma aplicação, **Corrigir por QR Code** mantém o fluxo de
+leitura pela câmera (com entrada manual do código como alternativa), enquanto
+**Histórico de correções** e **Correções sem aluno** abrem os fluxos de consulta
+e associação manual. A API reserva `POST /api/corrections` para o QR Code e usa
+`POST /api/corrections/manual` para o lançamento manual.
+
 Se o volume MySQL já existia antes da autenticação, aplique uma vez a migração
 aditiva, sem apagar os dados:
 
@@ -288,6 +299,16 @@ migração atuais; a suíte falha explicitamente se o banco não estiver acessí
 npm run db:up
 npm test
 ```
+
+Para executar somente as integrações obrigatórias com MySQL (autenticação,
+transações de correção e o fluxo autenticado por QR Code), use:
+
+```bash
+npm run test:mysql
+```
+
+Essas suítes falham, em vez de serem ignoradas, quando o MySQL não está
+disponível.
 
 ### Build e execução de produção
 

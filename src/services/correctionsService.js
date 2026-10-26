@@ -2,6 +2,165 @@ const database = require('../config/database');
 const defaultRepository = require('../repositories/correctionsRepository');
 const { ApiError } = require('../http/ApiError');
 
+const normalizeCode = (value) => String(value || '').trim();
+
+function qrCorrectionPayload(body) {
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+        throw new ApiError(400, 'VALIDATION_ERROR', 'Dados invalidos.');
+    }
+
+    const allowed = new Set([
+        'qrCodePayload',
+        'studentName',
+        'studentRegistration',
+        'notes',
+        'answers'
+    ]);
+    const unexpected = Object.keys(body).filter((field) => !allowed.has(field));
+    if (unexpected.length) {
+        throw new ApiError(
+            400,
+            'VALIDATION_ERROR',
+            'O corpo contem campos nao permitidos.',
+            unexpected.map((field) => ({ field }))
+        );
+    }
+
+    if (typeof body.qrCodePayload !== 'string') {
+        throw new ApiError(400, 'VALIDATION_ERROR', 'Codigo QR invalido.', [
+            { field: 'qrCodePayload' }
+        ]);
+    }
+    const qrCodePayload = normalizeCode(body.qrCodePayload);
+    if (!qrCodePayload || qrCodePayload.length > 500) {
+        throw new ApiError(400, 'VALIDATION_ERROR', 'Codigo QR invalido.', [
+            { field: 'qrCodePayload' }
+        ]);
+    }
+
+    const normalizeOptionalText = (field, maxLength) => {
+        if (body[field] == null) return null;
+        if (typeof body[field] !== 'string') {
+            throw new ApiError(400, 'VALIDATION_ERROR', 'Dados invalidos.', [{ field }]);
+        }
+        const value = body[field].trim();
+        if (value.length > maxLength) {
+            throw new ApiError(400, 'VALIDATION_ERROR', 'Dados invalidos.', [{ field }]);
+        }
+        return value || null;
+    };
+
+    if (body.answers != null && !Array.isArray(body.answers)) {
+        throw new ApiError(400, 'VALIDATION_ERROR', 'Respostas invalidas.', [
+            { field: 'answers' }
+        ]);
+    }
+    const answers = (body.answers || []).map((answer, index) => {
+        const field = `answers.${index}`;
+        if (!answer || typeof answer !== 'object' || Array.isArray(answer)) {
+            throw new ApiError(400, 'VALIDATION_ERROR', 'Respostas invalidas.', [{ field }]);
+        }
+        const answerFields = Object.keys(answer);
+        if (answerFields.some((key) => !['questionId', 'selectedAlternativeId'].includes(key))) {
+            throw new ApiError(400, 'VALIDATION_ERROR', 'Respostas invalidas.', [{ field }]);
+        }
+        const questionId = strictBodyId(answer.questionId, `${field}.questionId`);
+        const selectedAlternativeId = answer.selectedAlternativeId == null
+            ? null
+            : strictBodyId(
+                answer.selectedAlternativeId,
+                `${field}.selectedAlternativeId`
+            );
+        return { questionId, selectedAlternativeId };
+    });
+
+    return {
+        qrCodePayload,
+        studentName: normalizeOptionalText('studentName', 150),
+        studentRegistration: normalizeOptionalText('studentRegistration', 40),
+        notes: normalizeOptionalText('notes', 5000),
+        answers
+    };
+}
+
+function correctionUpdatePayload(body) {
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+        throw new ApiError(400, 'VALIDATION_ERROR', 'Dados invalidos.');
+    }
+
+    const allowed = new Set(['studentName', 'studentRegistration', 'notes', 'answers']);
+    const unexpected = Object.keys(body).filter((field) => !allowed.has(field));
+    if (unexpected.length) {
+        throw new ApiError(
+            400,
+            'VALIDATION_ERROR',
+            'O corpo contem campos nao permitidos.',
+            unexpected.map((field) => ({ field }))
+        );
+    }
+
+    const normalizeOptionalText = (field, maxLength) => {
+        if (body[field] == null) return null;
+        if (typeof body[field] !== 'string') {
+            throw new ApiError(400, 'VALIDATION_ERROR', 'Dados invalidos.', [{ field }]);
+        }
+        const value = body[field].trim();
+        if (value.length > maxLength) {
+            throw new ApiError(400, 'VALIDATION_ERROR', 'Dados invalidos.', [{ field }]);
+        }
+        return value || null;
+    };
+
+    if (!Array.isArray(body.answers)) {
+        throw new ApiError(400, 'VALIDATION_ERROR', 'Respostas invalidas.', [
+            { field: 'answers' }
+        ]);
+    }
+
+    const seenQuestions = new Set();
+    const answers = body.answers.map((answer, index) => {
+        const field = `answers.${index}`;
+        if (!answer || typeof answer !== 'object' || Array.isArray(answer)) {
+            throw new ApiError(400, 'VALIDATION_ERROR', 'Respostas invalidas.', [{ field }]);
+        }
+        const keys = Object.keys(answer);
+        const unexpectedAnswerFields = keys.filter(
+            (key) => !['questionId', 'selectedAlternativeId'].includes(key)
+        );
+        if (
+            unexpectedAnswerFields.length
+            || !Object.hasOwn(answer, 'questionId')
+            || !Object.hasOwn(answer, 'selectedAlternativeId')
+        ) {
+            throw new ApiError(400, 'VALIDATION_ERROR', 'Respostas invalidas.', [{ field }]);
+        }
+
+        const questionId = strictBodyId(answer.questionId, `${field}.questionId`);
+        if (seenQuestions.has(questionId)) {
+            throw new ApiError(400, 'VALIDATION_ERROR', 'Respostas invalidas.', [{
+                field: `${field}.questionId`,
+                message: 'A questao foi enviada mais de uma vez'
+            }]);
+        }
+        seenQuestions.add(questionId);
+
+        const selectedAlternativeId = answer.selectedAlternativeId == null
+            ? null
+            : strictBodyId(
+                answer.selectedAlternativeId,
+                `${field}.selectedAlternativeId`
+            );
+        return { questionId, selectedAlternativeId };
+    });
+
+    return {
+        studentName: normalizeOptionalText('studentName', 150),
+        studentRegistration: normalizeOptionalText('studentRegistration', 40),
+        notes: normalizeOptionalText('notes', 5000),
+        answers
+    };
+}
+
 function positiveId(value, field) {
     const isNumericValue = typeof value === 'number'
         || (typeof value === 'string' && /^\d+$/.test(value));
@@ -444,7 +603,7 @@ function createCorrectionsService({
                     transaction
                 );
 
-                const created = await repository.findCorrectionById(
+                const created = await repository.findCorrectionSummaryById(
                     correctionId,
                     ownerId,
                     transaction
@@ -462,6 +621,241 @@ function createCorrectionsService({
             }
             throw error;
         }
+    }
+
+
+    async function getContext(code, teacherId) {
+        const ownerId = positiveId(teacherId, 'teacherId');
+        const normalizedCode = normalizeCode(code);
+        if (!normalizedCode) {
+            throw new ApiError(400, 'VALIDATION_ERROR', 'Informe o codigo da prova');
+        }
+
+        const context = await repository.findCorrectionContext(normalizedCode, ownerId);
+        if (!context) {
+            throw new ApiError(
+                404,
+                'INVALID_QR_CODE',
+                'Codigo invalido ou prova nao pertencente ao professor'
+            );
+        }
+
+        return context;
+    }
+
+    async function correct(teacherId, body) {
+        const ownerId = positiveId(teacherId, 'teacherId');
+        const payload = qrCorrectionPayload(body);
+        const context = await getContext(payload.qrCodePayload, ownerId);
+        const studentName = String(
+            payload.studentName || context.assignedStudentName || ''
+        ).trim();
+        const studentRegistration = String(
+            payload.studentRegistration || context.assignedStudentRegistration || ''
+        ).trim();
+        const answers = payload.answers;
+
+        if (!studentRegistration && !context.assignedStudentId) {
+            throw new ApiError(400, 'VALIDATION_ERROR', 'Informe a matricula do aluno');
+        }
+
+        const details = [];
+        const answersByQuestion = new Map();
+        answers.forEach((answer) => {
+            if (answersByQuestion.has(answer.questionId)) {
+                details.push({
+                    field: `answers.${answer.questionId}`,
+                    message: 'A questao foi enviada mais de uma vez'
+                });
+            }
+            answersByQuestion.set(answer.questionId, answer);
+        });
+        [...answersByQuestion.keys()].forEach((questionId) => {
+            if (!context.questions.some(
+                (question) => Number(question.questionId) === Number(questionId)
+            )) {
+                details.push({
+                    field: 'answers',
+                    message: 'A resposta referencia uma questao que nao pertence a versao'
+                });
+            }
+        });
+        const normalizedAnswers = context.questions.map((question) => {
+            const answer = answersByQuestion.get(Number(question.questionId));
+            const selectedAlternativeId = answer?.selectedAlternativeId
+                ? Number(answer.selectedAlternativeId)
+                : null;
+            const selectedAlternative = question.alternatives.find(
+                (alternative) => Number(alternative.id) === selectedAlternativeId
+            );
+
+            if (answer && selectedAlternativeId && !selectedAlternative) {
+                details.push({
+                    field: `answers.${question.questionId}`,
+                    message: 'Alternativa invalida para a questao'
+                });
+            }
+
+            return {
+                questionId: question.questionId,
+                selectedAlternativeId: selectedAlternative ? selectedAlternative.id : null,
+                isCorrect: false,
+                awardedScore: 0
+            };
+        });
+
+        if (details.length > 0) {
+            throw new ApiError(400, 'VALIDATION_ERROR', 'Respostas invalidas', details);
+        }
+
+        return databaseClient.withTransaction(async (transaction) => {
+            const answerKey = await repository.findQrAnswerKey(
+                context.applicationId,
+                context.examVersionId,
+                transaction
+            );
+            const keyByQuestion = new Map(
+                answerKey.map((row) => [Number(row.questionId), row])
+            );
+            let totalScore = 0;
+
+            normalizedAnswers.forEach((answer) => {
+                const key = keyByQuestion.get(Number(answer.questionId));
+                answer.isCorrect = Boolean(
+                    key
+                    && Number(key.correctAlternativeId)
+                        === Number(answer.selectedAlternativeId)
+                );
+                answer.awardedScore = answer.isCorrect ? Number(key.score) : 0;
+                totalScore += answer.awardedScore;
+            });
+
+            const correctionId = await repository.insertQrCorrection({
+                assignmentId: context.assignmentId || null,
+                examVersionId: context.examVersionId,
+                studentId: context.assignedStudentId || null,
+                studentName: studentName || null,
+                studentRegistration: studentRegistration || null,
+                totalScore,
+                answers: normalizedAnswers,
+                teacherId: ownerId,
+                notes: payload.notes
+            }, transaction);
+
+            return {
+                id: correctionId,
+                examVersionId: context.examVersionId,
+                studentName,
+                studentRegistration,
+                totalScore,
+                answers: normalizedAnswers
+            };
+        });
+    }
+
+    async function getCorrection(id, teacherId) {
+        const correctionId = positiveId(id, 'correctionId');
+        const ownerId = positiveId(teacherId, 'teacherId');
+        const correction = await repository.findCorrectionById(correctionId, ownerId);
+        if (!correction) {
+            throw new ApiError(404, 'NOT_FOUND', 'Correcao nao encontrada');
+        }
+        return correction;
+    }
+
+    async function update(id, teacherId, body) {
+        const correctionId = positiveId(id, 'correctionId');
+        const ownerId = positiveId(teacherId, 'teacherId');
+        const payload = correctionUpdatePayload(body);
+        const current = await getCorrection(correctionId, ownerId);
+        const answers = payload.answers;
+        if (answers.length !== current.questions.length) {
+            throw new ApiError(400, 'VALIDATION_ERROR', 'Respostas invalidas.', [{
+                field: 'answers',
+                message: 'Informe exatamente uma resposta para cada questao da versao'
+            }]);
+        }
+        const answerByQuestion = new Map();
+        const details = [];
+
+        answers.forEach((answer) => {
+            const questionId = Number(answer?.questionId);
+            if (answerByQuestion.has(questionId)) {
+                details.push({
+                    field: `answers.${questionId}`,
+                    message: 'A questao foi enviada mais de uma vez'
+                });
+            }
+            answerByQuestion.set(questionId, answer);
+        });
+
+        const normalizedAnswers = current.questions.map((question) => {
+            const answer = answerByQuestion.get(Number(question.questionId));
+            const selectedAlternativeId = answer?.selectedAlternativeId
+                ? Number(answer.selectedAlternativeId)
+                : null;
+            const selectedAlternative = question.alternatives.find(
+                (alternative) => Number(alternative.id) === selectedAlternativeId
+            );
+
+            if (answer && selectedAlternativeId && !selectedAlternative) {
+                details.push({
+                    field: `answers.${question.questionId}`,
+                    message: 'A alternativa nao pertence a versao recebida'
+                });
+            }
+
+            return {
+                questionId: question.questionId,
+                selectedAlternativeId: selectedAlternative ? selectedAlternative.id : null,
+                isCorrect: Boolean(selectedAlternative?.isCorrect),
+                awardedScore: selectedAlternative?.isCorrect ? question.score : 0
+            };
+        });
+
+        const unknownQuestion = [...answerByQuestion.keys()].find(
+            (questionId) => !current.questions.some(
+                (question) => Number(question.questionId) === questionId
+            )
+        );
+        if (unknownQuestion !== undefined) {
+            details.push({
+                field: 'answers',
+                message: 'A resposta referencia uma questao que nao pertence a versao'
+            });
+        }
+
+        if (details.length > 0) {
+            throw new ApiError(400, 'VALIDATION_ERROR', 'Respostas invalidas', details);
+        }
+
+        const totalScore = normalizedAnswers.reduce(
+            (total, answer) => total + answer.awardedScore,
+            0
+        );
+        const studentName = String(payload.studentName || current.studentName || '').trim();
+        const studentRegistration = String(
+            payload.studentRegistration || current.studentRegistration || ''
+        ).trim();
+
+        if (!studentRegistration && !current.studentId) {
+            throw new ApiError(400, 'VALIDATION_ERROR', 'Informe a matricula do aluno');
+        }
+
+        await databaseClient.withTransaction((transaction) => repository.updateCorrection(
+            correctionId,
+            {
+                teacherId: ownerId,
+                studentName,
+                studentRegistration,
+                totalScore,
+                notes: payload.notes,
+                answers: normalizedAnswers
+            },
+            transaction
+        ));
+
+        return getCorrection(correctionId, ownerId);
     }
 
     async function listStudents(teacherId, applicationId) {
@@ -585,6 +979,10 @@ function createCorrectionsService({
     }
 
     return {
+        getContext,
+        correct,
+        getCorrection,
+        update,
         listCorrections,
         getFormOptions,
         getVersionQuestions,

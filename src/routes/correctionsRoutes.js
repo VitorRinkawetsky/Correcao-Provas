@@ -12,13 +12,20 @@ function createCorrectionsRouter({
     const controller = createCorrectionsController(service);
 
     router.use(context);
+
     router.get('/', controller.listCorrections);
-    router.post('/', controller.createCorrection);
+    router.get('/context', controller.context);
+    router.post('/', controller.create);
+    router.post('/manual', controller.createCorrection);
+
     router.get('/applications/:applicationId/form-options', controller.getFormOptions);
     router.get('/applications/:applicationId/pending', controller.listPending);
     router.get('/applications/:applicationId/students', controller.listStudents);
     router.get('/versions/:versionId/questions', controller.getVersionQuestions);
     router.put('/:correctionId/student', controller.associateStudent);
+
+    router.get('/:id', controller.details);
+    router.put('/:id', controller.update);
     router.use(handleApiError);
 
     return router;

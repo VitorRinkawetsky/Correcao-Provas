@@ -1,7 +1,7 @@
 const defaultService = require('../services/correctionsService');
 
-function success(response, data) {
-    return response.json({
+function success(response, data, status = 200) {
+    return response.status(status).json({
         data,
         meta: Array.isArray(data) ? { total: data.length } : {}
     });
@@ -9,16 +9,64 @@ function success(response, data) {
 
 function createCorrectionsController(service = defaultService) {
     return {
+        context: async (request, response, next) => {
+            try {
+                return success(
+                    response,
+                    await service.getContext(request.query.code, request.teacher.id)
+                );
+            } catch (error) {
+                return next(error);
+            }
+        },
+
+        create: async (request, response, next) => {
+            try {
+                return success(
+                    response,
+                    await service.correct(request.teacher.id, request.body),
+                    201
+                );
+            } catch (error) {
+                return next(error);
+            }
+        },
+
+        details: async (request, response, next) => {
+            try {
+                return success(
+                    response,
+                    await service.getCorrection(request.params.id, request.teacher.id)
+                );
+            } catch (error) {
+                return next(error);
+            }
+        },
+
+        update: async (request, response, next) => {
+            try {
+                return success(
+                    response,
+                    await service.update(
+                        request.params.id,
+                        request.teacher.id,
+                        request.body
+                    )
+                );
+            } catch (error) {
+                return next(error);
+            }
+        },
+
         listCorrections: async (request, response, next) => {
             try {
-                const data = await service.listCorrections(
-                    request.teacher.id,
-                    {
+                return success(
+                    response,
+                    await service.listCorrections(request.teacher.id, {
                         applicationId: request.query.applicationId,
                         search: request.query.search
-                    }
+                    })
                 );
-                return success(response, data);
             } catch (error) {
                 return next(error);
             }
@@ -26,11 +74,13 @@ function createCorrectionsController(service = defaultService) {
 
         getFormOptions: async (request, response, next) => {
             try {
-                const data = await service.getFormOptions(
-                    request.teacher.id,
-                    request.params.applicationId
+                return success(
+                    response,
+                    await service.getFormOptions(
+                        request.teacher.id,
+                        request.params.applicationId
+                    )
                 );
-                return success(response, data);
             } catch (error) {
                 return next(error);
             }
@@ -38,11 +88,13 @@ function createCorrectionsController(service = defaultService) {
 
         getVersionQuestions: async (request, response, next) => {
             try {
-                const data = await service.getVersionQuestions(
-                    request.teacher.id,
-                    request.params.versionId
+                return success(
+                    response,
+                    await service.getVersionQuestions(
+                        request.teacher.id,
+                        request.params.versionId
+                    )
                 );
-                return success(response, data);
             } catch (error) {
                 return next(error);
             }
@@ -50,11 +102,11 @@ function createCorrectionsController(service = defaultService) {
 
         createCorrection: async (request, response, next) => {
             try {
-                const data = await service.createCorrection(
-                    request.teacher.id,
-                    request.body
+                return success(
+                    response,
+                    await service.createCorrection(request.teacher.id, request.body),
+                    201
                 );
-                return response.status(201).json({ data, meta: {} });
             } catch (error) {
                 return next(error);
             }
@@ -62,11 +114,13 @@ function createCorrectionsController(service = defaultService) {
 
         listPending: async (request, response, next) => {
             try {
-                const data = await service.listPending(
-                    request.teacher.id,
-                    request.params.applicationId
+                return success(
+                    response,
+                    await service.listPending(
+                        request.teacher.id,
+                        request.params.applicationId
+                    )
                 );
-                return success(response, data);
             } catch (error) {
                 return next(error);
             }
@@ -74,11 +128,13 @@ function createCorrectionsController(service = defaultService) {
 
         listStudents: async (request, response, next) => {
             try {
-                const data = await service.listStudents(
-                    request.teacher.id,
-                    request.params.applicationId
+                return success(
+                    response,
+                    await service.listStudents(
+                        request.teacher.id,
+                        request.params.applicationId
+                    )
                 );
-                return success(response, data);
             } catch (error) {
                 return next(error);
             }
@@ -86,12 +142,14 @@ function createCorrectionsController(service = defaultService) {
 
         associateStudent: async (request, response, next) => {
             try {
-                const data = await service.associateStudent(
-                    request.teacher.id,
-                    request.params.correctionId,
-                    request.body
+                return success(
+                    response,
+                    await service.associateStudent(
+                        request.teacher.id,
+                        request.params.correctionId,
+                        request.body
+                    )
                 );
-                return success(response, data);
             } catch (error) {
                 return next(error);
             }
