@@ -7,6 +7,7 @@ const reportsRoutes = require('./routes/reportsRoutes');
 
 const { checkDatabaseConnection } = require('./config/database');
 const examsRoutes = require('./routes/examsRoutes');
+const correctionsRoutes = require('./routes/correctionsRoutes');
 const questionsRoutes = require('./routes/questionsRoutes');
 const { handleApiError } = require('./http/ApiError');
 
@@ -37,6 +38,7 @@ app.get('/api/health', async (_request, response) => {
 });
 
 app.use('/api/exams', examsRoutes);
+app.use('/api/corrections', correctionsRoutes);
 app.use('/api/application-versions', applicationVersionsRoutes);
 app.use('/api/applications', applicationsRoutes);
 app.use('/api/reports', reportsRoutes);
