@@ -1,11 +1,22 @@
 <script setup>
 import { ArrowRight, CheckCircle2, FileText, Layers3 } from '@lucide/vue';
+import { onMounted, ref } from 'vue';
 import { RouterLink } from 'vue-router';
 
 import StatusBadge from '../components/ui/StatusBadge.vue';
-import { formatScore, getExamDetails } from '../data/mockData';
+import { formatScore } from '../data/mockData';
+import { listExams } from '../services/examApi';
 
-const featuredExam = getExamDetails(1);
+const featuredExam = ref(null);
+
+onMounted(async () => {
+    try {
+        const exams = await listExams();
+        featuredExam.value = (exams || []).find((exam) => exam.status !== 'archived') || null;
+    } catch {
+        featuredExam.value = null;
+    }
+});
 </script>
 
 <template>
@@ -20,8 +31,8 @@ const featuredExam = getExamDetails(1);
                 <p class="home-hero__description">
                     Consulte a avaliação disponível e visualize sua composição em um ambiente simples e organizado.
                 </p>
-                <RouterLink to="/provas/1" class="button button--light">
-                    Ver detalhes da prova
+                <RouterLink to="/provas" class="button button--light">
+                    Ver minhas provas
                     <ArrowRight :size="18" />
                 </RouterLink>
             </div>

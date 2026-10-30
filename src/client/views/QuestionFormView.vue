@@ -86,9 +86,23 @@ const removeAlternative = (index) => {
 };
 
 
-    const handleSubmit = async () => {
-        isSaving.value = true;
+const handleSubmit = async () => {
+    const correctAlternativeIndex = form.alternatives.findIndex(
+        (alternative) => alternative.key === correctAlternativeKey.value
+    );
+    const input = {
+        statement: form.statement,
+        tags: form.tags,
+        alternatives: form.alternatives,
+        correctAlternativeIndex
+    };
+    const validation = validateQuestionInput(input);
+    errors.value = validation.errors;
     submitError.value = '';
+
+    if (!validation.valid) return;
+
+    isSaving.value = true;
 
     try {
         await saveQuestion(input, questionId.value);
