@@ -155,6 +155,7 @@ h2 {
 .brand__copy {
     display: grid;
     line-height: 1.05;
+    white-space: nowrap;
 }
 
 .brand__copy strong {

@@ -109,29 +109,67 @@ Os requisitos abaixo representam a visão do produto. A coluna **Situação atua
 
 ## 4. Telas do Sistema
 
-### 4.1 Página inicial
+As capturas abaixo mostram o sistema operando sobre o MySQL, com dados de demonstração.
 
-Apresenta o acesso rápido à prova mais recente do professor. Os demais fluxos ficam no menu superior: Provas, Aplicações, Turmas, Banco de questões e Relatórios.
+### 4.1 Acesso do professor
+
+Somente professores possuem conta. A tela de entrada permite login e leva ao cadastro de uma nova conta de professor.
+
+![Tela de entrada do professor](docs/telas/login.png)
+
+### 4.2 Página inicial
+
+Apresenta o acesso rápido à prova mais recente do professor. Os demais fluxos ficam no menu superior: Provas, Aplicações, Turmas, Questões e Relatórios.
 
 ![Página inicial do SGP Católica](docs/telas/pagina-inicial.png)
 
-### 4.2 Banco de questões
+### 4.3 Turmas
+
+Exibe os dados da turma, o código de convite e os alunos vinculados, que podem ser adicionados (inclusive cadastrando um novo registro acadêmico) ou removidos.
+
+![Detalhes da turma](docs/telas/turma.png)
+
+### 4.4 Banco de questões
 
 Lista as questões objetivas e permite pesquisar por enunciado ou tag, filtrar por tag, editar, excluir e iniciar um novo cadastro.
 
 ![Banco de questões objetivas](docs/telas/banco-questoes.png)
 
-### 4.3 Formulário de questão objetiva
+### 4.5 Formulário de questão objetiva
 
 Permite informar o enunciado, cadastrar de duas a cinco alternativas, marcar exatamente uma resposta correta e adicionar tags.
 
 ![Formulário de questão objetiva](docs/telas/formulario-questao.png)
 
-### 4.4 Aplicações
+### 4.6 Provas
 
-Exibe as aplicações cadastradas, suas turmas, estados e o progresso de correção.
+Lista as provas do professor com quantidade de questões e situação. Cada prova define a ordem e a pontuação individual das questões.
+
+![Listagem de provas](docs/telas/provas.png)
+
+### 4.7 Aplicações
+
+Exibe as aplicações cadastradas (prova aplicada a uma turma) e seus estados.
 
 ![Listagem de aplicações](docs/telas/aplicacoes.png)
+
+### 4.8 Versões e QR Codes
+
+Mostra as versões geradas com embaralhamento de questões e alternativas, o gabarito de cada versão e os QR Codes de correção; com identificação, cada aluno recebe a sua versão e o seu QR Code.
+
+![Versões da prova e QR Codes](docs/telas/versoes-qr.png)
+
+### 4.9 Correção
+
+Ao ler o QR Code (ou colar o código), a prova da versão é exibida com o aluno identificado. A nota é calculada no servidor e a correção pode ser revisada depois.
+
+![Correção da prova](docs/telas/correcao.png)
+
+### 4.10 Relatórios
+
+Apresenta média, mediana, maior e menor nota, distribuição e notas por estudante, com filtros por turma, aplicação e período e exportação em CSV.
+
+![Relatório de desempenho](docs/telas/relatorios.png)
 
 ---
 
