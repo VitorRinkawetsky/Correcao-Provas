@@ -9,10 +9,17 @@ const route = useRoute();
 const router = useRouter();
 const search = ref('');
 const selectedTag = ref('');
-const { questions, getQuestion, deleteQuestion, loadQuestions } = useQuestionStore();
+const { questions, deleteQuestion, loadQuestions } = useQuestionStore();
+const loadError = ref('');
+const actionError = ref('');
+const deletingId = ref(null);
 
-onMounted(() => {
-    loadQuestions();
+onMounted(async () => {
+    try {
+        await loadQuestions();
+    } catch (error) {
+        loadError.value = error.message;
+    }
 });
 
 const availableTags = computed(() => [...new Set(
@@ -45,12 +52,22 @@ const clearFeedback = () => {
     router.replace({ query });
 };
 
-const handleDelete = (question) => {
+const handleDelete = async (question) => {
     const confirmed = window.confirm(`Excluir a questão “${question.statement}”?`);
-    if (!confirmed) return;
+    if (!confirmed || deletingId.value !== null) return;
 
-    deleteQuestion(question.id);
+    deletingId.value = question.id;
+    actionError.value = '';
+
+    try {
+        await deleteQuestion(question.id);
+    } catch (error) {
+        actionError.value = error.message;
+    } finally {
+        deletingId.value = null;
+    }
 };
+
 </script>
 
 <template>
@@ -72,7 +89,10 @@ const handleDelete = (question) => {
             <span>{{ feedbackMessage }}</span>
             <button type="button" @click="clearFeedback">Fechar</button>
         </div>
-
+        <div v-if="loadError || actionError" class="question-bank__feedback" role="alert">
+            <span>{{ loadError || actionError }}</span>
+            <button type="button" @click="loadError = ''; actionError = ''">Fechar</button>
+        </div>
         <section class="question-bank__filters" aria-label="Filtros do banco de questões">
             <label class="filter-field filter-field--search">
                 <span>Pesquisar</span>

@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from 'vue';
 
-import { statusLabels, statusTones } from '../../data/mockData';
+import { statusLabels, statusTones } from '../../data/statusCatalog';
 
 const props = defineProps({
     status: {

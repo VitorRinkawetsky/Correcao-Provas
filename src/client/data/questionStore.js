@@ -1,5 +1,7 @@
 import { readonly, ref } from 'vue';
 
+import { reportUnauthorized } from '../services/apiClient';
+
 const clone = (value) => JSON.parse(JSON.stringify(value));
 
 export const normalizeTags = (value) => {
@@ -80,8 +82,27 @@ const normalizeQuestion = (question) => ({
             position: Number(alternative.position || 0),
             isCorrect: Boolean(alternative.isCorrect)
         })),
-    correctAlternativeId: Number(question.correctAlternativeId)
+    correctAlternativeId: question.correctAlternativeId == null
+        ? null
+        : Number(question.correctAlternativeId)
 });
+
+// A API responde { error: { message, details } }; mantém suporte a { message }.
+const apiErrorMessage = (data, fallback) =>
+    data?.error?.message || data?.message || fallback;
+
+const apiValidationErrors = (data) => {
+    const details = data?.error?.details;
+
+    if (!Array.isArray(details)) return data?.validationErrors || {};
+
+    return details.reduce((errors, detail) => {
+        if (detail?.field && detail?.message) {
+            errors[detail.field] = detail.message;
+        }
+        return errors;
+    }, {});
+};
 
 const questionsState = ref([]);
 
@@ -94,9 +115,17 @@ export const loadQuestions = async () => {
     const response = await fetch('/api/questions');
 
     if (!response.ok) {
-        throw new Error(
-            'Não foi possível carregar as questões.'
+        const data = await response.json().catch(() => ({}));
+
+        const error = new Error(
+            apiErrorMessage(
+                data,
+                'Não foi possível carregar as questões.'
+            )
         );
+        error.status = response.status;
+        if (response.status === 401) reportUnauthorized('/api/questions', error);
+        throw error;
     }
 
     const data = await response.json();
@@ -122,7 +151,6 @@ const saveQuestion = async (input, id = null) => {
 
     const payload = {
         statement: String(input.statement).trim(),
-        teacherId: 1,
         tags: normalizeTags(input.tags),
         alternatives: input.alternatives.map(
             (alternative) => ({
@@ -148,16 +176,19 @@ const saveQuestion = async (input, id = null) => {
         body: JSON.stringify(payload)
     });
 
-    const data = await response.json();
+    const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
         const error = new Error(
-            data.message ||
-            'Não foi possível salvar a questão.'
+            apiErrorMessage(
+                data,
+                'Não foi possível salvar a questão.'
+            )
         );
 
-        error.validationErrors =
-            data.validationErrors || {};
+        error.validationErrors = apiValidationErrors(data);
+        error.status = response.status;
+        if (response.status === 401) reportUnauthorized(url, error);
 
         throw error;
     }
@@ -178,10 +209,17 @@ const deleteQuestion = async (id) => {
     if (!response.ok) {
         const data = await response.json().catch(() => ({}));
 
-        throw new Error(
-            data.message ||
-            'Não foi possível excluir a questão.'
+        const error = new Error(
+            apiErrorMessage(
+                data,
+                'Não foi possível excluir a questão.'
+            )
         );
+        error.status = response.status;
+        if (response.status === 401) {
+            reportUnauthorized(`/api/questions/${id}`, error);
+        }
+        throw error;
     }
 
     questionsState.value = questionsState.value.filter(

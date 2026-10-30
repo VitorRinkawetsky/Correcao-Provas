@@ -2,20 +2,27 @@
 const express = require('express');
 const path = require('path');
 
-const applicationsRoutes = require('./routes/applicationsRoutes');
-const reportsRoutes = require('./routes/reportsRoutes');
+const { checkDatabaseConnection } = require('./config/database');
+const { TRUST_PROXY_HOPS } = require('./config/proxy');
 
-const {
-    pool,
-    checkDatabaseConnection
-} = require('./config/database');
+const authRoutes = require('./routes/authRoutes');
+const requireTeacherSession = require('./middlewares/requireTeacherSession');
 
 const examsRoutes = require('./routes/examsRoutes');
-const teacherContext = require('./middlewares/teacherContext');
-const { handleApiError } = require('./http/ApiError');
+const applicationsRoutes = require('./routes/applicationsRoutes');
+const applicationVersionsRoutes = require('./routes/applicationVersionsRoutes');
+const correctionsRoutes = require('./routes/correctionsRoutes');
+const reportsRoutes = require('./routes/reportsRoutes');
+const questionsRoutes = require('./routes/questionsRoutes');
 const classesRoutes = require('./routes/classesRoutes');
 
+const { handleApiError } = require('./http/ApiError');
+
 const app = express();
+
+if (TRUST_PROXY_HOPS > 0) {
+    app.set('trust proxy', TRUST_PROXY_HOPS);
+}
 
 app.use(express.json());
 
@@ -34,10 +41,7 @@ app.get('/api/health', async (_request, response) => {
             database: 'connected'
         });
     } catch (error) {
-        console.error(
-            'Falha no health check:',
-            error.message
-        );
+        console.error('Falha no health check:', error.message);
 
         response.status(500).json({
             status: 'error',
@@ -48,517 +52,48 @@ app.get('/api/health', async (_request, response) => {
 
 /*
 |--------------------------------------------------------------------------
+| AUTENTICAÇÃO
+|--------------------------------------------------------------------------
+*/
+
+// As rotas de autenticação precisam ficar antes da proteção de sessão.
+app.use('/api/auth', authRoutes);
+
+/*
+|--------------------------------------------------------------------------
+| PROTEÇÃO DAS ROTAS
+|--------------------------------------------------------------------------
+*/
+
+app.use('/api', requireTeacherSession);
+
+/*
+|--------------------------------------------------------------------------
 | ROTAS DA API
 |--------------------------------------------------------------------------
 */
 
 app.use('/api/exams', examsRoutes);
+app.use('/api/application-versions', applicationVersionsRoutes);
 app.use('/api/applications', applicationsRoutes);
+app.use('/api/corrections', correctionsRoutes);
 app.use('/api/reports', reportsRoutes);
-
-/*
-|--------------------------------------------------------------------------
-| LISTAR QUESTÕES
-|--------------------------------------------------------------------------
-*/
-
-app.get('/api/questions', teacherContext, async (request, response) => {
-    try {
-        const [questions] = await pool.execute(`
-            SELECT
-                q.id,
-                q.teacher_id AS teacherId,
-                q.statement,
-                q.status,
-                q.created_at AS createdAt,
-                q.updated_at AS updatedAt
-            FROM questions q
-            WHERE q.teacher_id = ?
-            ORDER BY q.id ASC
-        `, [request.teacher.id]);
-
-        const [alternatives] = await pool.execute(`
-            SELECT
-                id,
-                question_id AS questionId,
-                position,
-                alternative_text AS text,
-                is_correct AS isCorrect
-            FROM alternatives
-            ORDER BY question_id ASC, position ASC
-        `);
-
-        const [questionTags] = await pool.execute(`
-            SELECT
-                qt.question_id AS questionId,
-                t.name
-            FROM question_tags qt
-            INNER JOIN tags t
-                ON t.id = qt.tag_id
-            ORDER BY qt.question_id ASC, t.name ASC
-        `);
-
-        const questionsWithData = questions.map((question) => ({
-            ...question,
-
-            alternatives: alternatives
-                .filter(
-                    (alternative) =>
-                        alternative.questionId === question.id
-                )
-                .map((alternative) => ({
-                    id: alternative.id,
-                    position: alternative.position,
-                    text: alternative.text,
-                    isCorrect: Boolean(alternative.isCorrect)
-                })),
-
-            tags: questionTags
-                .filter(
-                    (tag) =>
-                        tag.questionId === question.id
-                )
-                .map((tag) => tag.name)
-        }));
-
-        response.json(questionsWithData);
-    } catch (error) {
-        console.error(
-            'Falha ao listar questões:',
-            error.message
-        );
-
-        response.status(500).json({
-            status: 'error',
-            message: 'Não foi possível carregar as questões.'
-        });
-    }
-});
-
-/*
-|--------------------------------------------------------------------------
-| CRIAR QUESTÃO
-|--------------------------------------------------------------------------
-*/
-
-app.post('/api/questions', teacherContext, async (request, response) => {
-    const connection = await pool.getConnection();
-
-    try {
-        const {
-            statement,
-            tags = [],
-            alternatives = [],
-            correctAlternativeIndex
-        } = request.body;
-
-        if (!String(statement || '').trim()) {
-            return response.status(400).json({
-                status: 'error',
-                message: 'O enunciado da questão é obrigatório.'
-            });
-        }
-
-        if (!Array.isArray(alternatives) || alternatives.length < 2) {
-            return response.status(400).json({
-                status: 'error',
-                message: 'A questão deve possuir pelo menos duas alternativas.'
-            });
-        }
-
-        if (
-            !Number.isInteger(correctAlternativeIndex) ||
-            correctAlternativeIndex < 0 ||
-            correctAlternativeIndex >= alternatives.length
-        ) {
-            return response.status(400).json({
-                status: 'error',
-                message: 'A alternativa correta é inválida.'
-            });
-        }
-
-        await connection.beginTransaction();
-
-        const [questionResult] = await connection.execute(
-            `
-            INSERT INTO questions (
-                teacher_id,
-                statement,
-                status
-            )
-            VALUES (?, ?, 'active')
-            `,
-            [
-                request.teacher.id,
-                String(statement).trim()
-            ]
-        );
-
-        const questionId = questionResult.insertId;
-
-        for (let index = 0; index < alternatives.length; index += 1) {
-            const alternative = alternatives[index];
-
-            await connection.execute(
-                `
-                INSERT INTO alternatives (
-                    question_id,
-                    position,
-                    alternative_text,
-                    is_correct
-                )
-                VALUES (?, ?, ?, ?)
-                `,
-                [
-                    questionId,
-                    index + 1,
-                    String(alternative.text || '').trim(),
-                    index === correctAlternativeIndex
-                ]
-            );
-        }
-
-        for (const tagName of tags) {
-            const normalizedTag = String(tagName || '').trim();
-
-            if (!normalizedTag) {
-                continue;
-            }
-
-            await connection.execute(
-                `
-                INSERT INTO tags (name)
-                VALUES (?)
-                ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)
-                `,
-                [normalizedTag]
-            );
-
-            const [tagRows] = await connection.execute(
-                `
-                SELECT id
-                FROM tags
-                WHERE name = ?
-                `,
-                [normalizedTag]
-            );
-
-            if (tagRows.length > 0) {
-                await connection.execute(
-                    `
-                    INSERT IGNORE INTO question_tags (
-                        question_id,
-                        tag_id
-                    )
-                    VALUES (?, ?)
-                    `,
-                    [
-                        questionId,
-                        tagRows[0].id
-                    ]
-                );
-            }
-        }
-
-        await connection.commit();
-
-        response.status(201).json({
-            status: 'created',
-            id: questionId
-        });
-    } catch (error) {
-        await connection.rollback();
-
-        console.error(
-            'Falha ao criar questão:',
-            error.message
-        );
-
-        response.status(500).json({
-            status: 'error',
-            message: 'Não foi possível criar a questão.'
-        });
-    } finally {
-        connection.release();
-    }
-});
-
-/*
-|--------------------------------------------------------------------------
-| ATUALIZAR QUESTÃO
-|--------------------------------------------------------------------------
-*/
-
-app.put('/api/questions/:id', teacherContext, async (request, response) => {
-    const connection = await pool.getConnection();
-
-    try {
-        const questionId = Number(request.params.id);
-
-        if (!Number.isInteger(questionId) || questionId <= 0) {
-            return response.status(400).json({
-                status: 'error',
-                message: 'ID da questão inválido.'
-            });
-        }
-
-        const {
-            statement,
-            tags = [],
-            alternatives = [],
-            correctAlternativeIndex
-        } = request.body;
-
-        if (!String(statement || '').trim()) {
-            return response.status(400).json({
-                status: 'error',
-                message: 'O enunciado da questão é obrigatório.'
-            });
-        }
-
-        if (!Array.isArray(alternatives) || alternatives.length < 2) {
-            return response.status(400).json({
-                status: 'error',
-                message: 'A questão deve possuir pelo menos duas alternativas.'
-            });
-        }
-
-        if (
-            !Number.isInteger(correctAlternativeIndex) ||
-            correctAlternativeIndex < 0 ||
-            correctAlternativeIndex >= alternatives.length
-        ) {
-            return response.status(400).json({
-                status: 'error',
-                message: 'A alternativa correta é inválida.'
-            });
-        }
-
-        await connection.beginTransaction();
-
-        const [questionRows] = await connection.execute(
-            `
-            SELECT id
-            FROM questions
-            WHERE id = ? AND teacher_id = ?
-            FOR UPDATE
-            `,
-            [questionId, request.teacher.id]
-        );
-
-        if (questionRows.length === 0) {
-            await connection.rollback();
-
-            return response.status(404).json({
-                status: 'error',
-                message: 'Questão não encontrada.'
-            });
-        }
-
-        await connection.execute(
-            `
-            UPDATE questions
-            SET statement = ?
-            WHERE id = ? AND teacher_id = ?
-            `,
-            [
-                String(statement).trim(),
-                questionId,
-                request.teacher.id
-            ]
-        );
-
-        await connection.execute(
-            `
-            DELETE FROM question_tags
-            WHERE question_id = ?
-            `,
-            [questionId]
-        );
-
-        await connection.execute(
-            `
-            DELETE FROM alternatives
-            WHERE question_id = ?
-            `,
-            [questionId]
-        );
-
-        for (let index = 0; index < alternatives.length; index += 1) {
-            const alternative = alternatives[index];
-
-            await connection.execute(
-                `
-                INSERT INTO alternatives (
-                    question_id,
-                    position,
-                    alternative_text,
-                    is_correct
-                )
-                VALUES (?, ?, ?, ?)
-                `,
-                [
-                    questionId,
-                    index + 1,
-                    String(alternative.text || '').trim(),
-                    index === correctAlternativeIndex
-                ]
-            );
-        }
-
-        for (const tagName of tags) {
-            const normalizedTag = String(tagName || '').trim();
-
-            if (!normalizedTag) {
-                continue;
-            }
-
-            await connection.execute(
-                `
-                INSERT INTO tags (name)
-                VALUES (?)
-                ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)
-                `,
-                [normalizedTag]
-            );
-
-            const [tagRows] = await connection.execute(
-                `
-                SELECT id
-                FROM tags
-                WHERE name = ?
-                `,
-                [normalizedTag]
-            );
-
-            if (tagRows.length > 0) {
-                await connection.execute(
-                    `
-                    INSERT IGNORE INTO question_tags (
-                        question_id,
-                        tag_id
-                    )
-                    VALUES (?, ?)
-                    `,
-                    [
-                        questionId,
-                        tagRows[0].id
-                    ]
-                );
-            }
-        }
-
-        await connection.commit();
-
-        response.json({
-            status: 'updated',
-            id: questionId
-        });
-    } catch (error) {
-        await connection.rollback();
-
-        console.error(
-            'Falha ao atualizar questão:',
-            error.message
-        );
-
-        response.status(500).json({
-            status: 'error',
-            message: 'Não foi possível atualizar a questão.'
-        });
-    } finally {
-        connection.release();
-    }
-});
-
-// Rotas de turmas
+app.use('/api/questions', questionsRoutes);
 app.use('/api/classes', classesRoutes);
 
 /*
 |--------------------------------------------------------------------------
-| EXCLUIR QUESTÃO
+| TRATAMENTO DE ERROS DA API
 |--------------------------------------------------------------------------
 */
 
-app.delete('/api/questions/:id', teacherContext, async (request, response) => {
-    const connection = await pool.getConnection();
-
-    try {
-        const questionId = Number(request.params.id);
-
-        if (!Number.isInteger(questionId) || questionId <= 0) {
-            return response.status(400).json({
-                status: 'error',
-                message: 'ID da questão inválido.'
-            });
-        }
-
-        await connection.beginTransaction();
-
-        const [questionRows] = await connection.execute(
-            `
-            SELECT id
-            FROM questions
-            WHERE id = ? AND teacher_id = ?
-            FOR UPDATE
-            `,
-            [questionId, request.teacher.id]
-        );
-
-        if (questionRows.length === 0) {
-            await connection.rollback();
-
-            return response.status(404).json({
-                status: 'error',
-                message: 'Questão não encontrada.'
-            });
-        }
-
-        await connection.execute(
-            'DELETE FROM question_tags WHERE question_id = ?',
-            [questionId]
-        );
-
-        await connection.execute(
-            'DELETE FROM alternatives WHERE question_id = ?',
-            [questionId]
-        );
-
-        await connection.execute(
-            `
-            DELETE FROM questions
-            WHERE id = ? AND teacher_id = ?
-            `,
-            [questionId, request.teacher.id]
-        );
-
-        await connection.commit();
-
-        response.json({
-            status: 'deleted',
-            id: questionId
-        });
-    } catch (error) {
-        await connection.rollback();
-
-        console.error('Falha ao excluir questão:', error.message);
-
-        response.status(500).json({
-            status: 'error',
-            message: 'Não foi possível excluir a questão.'
-        });
-    } finally {
-        connection.release();
-    }
-});
+app.use('/api', handleApiError);
 
 /*
 |--------------------------------------------------------------------------
 | API 404
 |--------------------------------------------------------------------------
 */
-
-app.use('/api', handleApiError);
 
 app.use('/api', (_request, response) => {
     response.status(404).json({
