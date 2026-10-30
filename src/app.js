@@ -1,22 +1,22 @@
 
 const express = require('express');
 const path = require('path');
-const applicationsRoutes = require('./routes/applicationsRoutes');
-const reportsRoutes = require('./routes/reportsRoutes');
-const authRoutes = require('./routes/authRoutes');
-const correctionsRoutes = require('./routes/correctionsRoutes');
-const requireTeacherSession = require('./middlewares/requireTeacherSession');
-const { TRUST_PROXY_HOPS } = require('./config/proxy');
-
 
 const { checkDatabaseConnection } = require('./config/database');
+const { TRUST_PROXY_HOPS } = require('./config/proxy');
+
+const authRoutes = require('./routes/authRoutes');
+const requireTeacherSession = require('./middlewares/requireTeacherSession');
+
 const examsRoutes = require('./routes/examsRoutes');
-const questionsRoutes = require('./routes/questionsRoutes');
-const { handleApiError } = require('./http/ApiError');
-
-const classesRoutes = require('./routes/classesRoutes');
+const applicationsRoutes = require('./routes/applicationsRoutes');
 const applicationVersionsRoutes = require('./routes/applicationVersionsRoutes');
+const correctionsRoutes = require('./routes/correctionsRoutes');
+const reportsRoutes = require('./routes/reportsRoutes');
+const questionsRoutes = require('./routes/questionsRoutes');
+const classesRoutes = require('./routes/classesRoutes');
 
+const { handleApiError } = require('./http/ApiError');
 
 const app = express();
 
@@ -25,6 +25,12 @@ if (TRUST_PROXY_HOPS > 0) {
 }
 
 app.use(express.json());
+
+/*
+|--------------------------------------------------------------------------
+| HEALTH CHECK
+|--------------------------------------------------------------------------
+*/
 
 app.get('/api/health', async (_request, response) => {
     try {
@@ -44,28 +50,50 @@ app.get('/api/health', async (_request, response) => {
     }
 });
 
+/*
+|--------------------------------------------------------------------------
+| AUTENTICAÇÃO
+|--------------------------------------------------------------------------
+*/
+
+// As rotas de autenticação precisam ficar antes da proteção de sessão.
 app.use('/api/auth', authRoutes);
+
+/*
+|--------------------------------------------------------------------------
+| PROTEÇÃO DAS ROTAS
+|--------------------------------------------------------------------------
+*/
+
 app.use('/api', requireTeacherSession);
+
+/*
+|--------------------------------------------------------------------------
+| ROTAS DA API
+|--------------------------------------------------------------------------
+*/
 
 app.use('/api/exams', examsRoutes);
 app.use('/api/application-versions', applicationVersionsRoutes);
 app.use('/api/applications', applicationsRoutes);
 app.use('/api/corrections', correctionsRoutes);
 app.use('/api/reports', reportsRoutes);
-
-// Rotas de questões (substitui os endpoints inline que existiam neste arquivo)
 app.use('/api/questions', questionsRoutes);
-
-// Rotas de turmas
 app.use('/api/classes', classesRoutes);
+
+/*
+|--------------------------------------------------------------------------
+| TRATAMENTO DE ERROS DA API
+|--------------------------------------------------------------------------
+*/
+
+app.use('/api', handleApiError);
 
 /*
 |--------------------------------------------------------------------------
 | API 404
 |--------------------------------------------------------------------------
 */
-
-app.use('/api', handleApiError);
 
 app.use('/api', (_request, response) => {
     response.status(404).json({

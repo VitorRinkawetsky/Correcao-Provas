@@ -11,17 +11,21 @@ import ProvaFormView from '../views/ProvaFormView.vue';
 import ProvasListView from '../views/ProvasListView.vue';
 import QuestionBank from '../views/QuestionBank.vue';
 import QuestionFormView from '../views/QuestionFormView.vue';
+
 import AplicacoesView from '../views/AplicacoesView.vue';
 import AplicacaoFormView from '../views/AplicacaoFormView.vue';
 import AplicacaoDetalhesView from '../views/AplicacaoDetalhesView.vue';
 import AplicacaoGerarView from '../views/AplicacaoGerarView.vue';
 import AplicacaoVersoesView from '../views/AplicacaoVersoesView.vue';
+
 import CorrecaoView from '../views/CorrecaoView.vue';
 import CorrecoesView from '../views/CorrecoesView.vue';
 import CorrecoesSemAlunoView from '../views/CorrecoesSemAlunoView.vue';
 import RelatoriosView from '../views/RelatoriosView.vue';
+
 import RegisterView from '../views/RegisterView.vue';
 import LoginView from '../views/LoginView.vue';
+
 import { useAuthStore } from '../data/authStore';
 import { setUnauthorizedHandler } from '../services/apiClient';
 import { createAuthGuard } from './authGuard';
@@ -245,7 +249,10 @@ setUnauthorizedHandler(({ path }) => {
     authStore.clearSession();
 
     const currentRoute = router.currentRoute.value;
-    const isProtected = currentRoute.matched.some((record) => record.meta.requiresAuth);
+    const isProtected = currentRoute.matched.some(
+        (record) => record.meta.requiresAuth
+    );
+
     if (isProtected && path !== '/api/auth/me') {
         void router.replace({
             name: 'login',
