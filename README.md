@@ -6,7 +6,7 @@
 
 Plataforma acadêmica para criação, aplicação e correção de provas, operada exclusivamente por professores da Católica SC.
 
-🔗 **Sistema hospedado:** _adicione aqui o link após a publicação_<br>
+🔗 **Sistema hospedado:** [sgp-catolica.onrender.com](https://sgp-catolica.onrender.com)<br>
 💻 **Código-fonte:** [github.com/VitorRinkawetsky/Correcao-Provas](https://github.com/VitorRinkawetsky/Correcao-Provas)
 
 ![Status](https://img.shields.io/badge/status-em%20desenvolvimento-f0ad4e)
@@ -292,6 +292,7 @@ sequenceDiagram
 
 - [ADR-001 — Uso de MySQL como banco relacional](docs/adr/ADR-001-banco-de-dados-mysql.md)
 - [ADR-002 — Acesso exclusivo de professores](docs/adr/ADR-002-acesso-exclusivo-professores.md)
+- [ADR-003 — Hospedagem no Render com MySQL no Aiven](docs/adr/ADR-003-hospedagem-render-aiven.md)
 
 ---
 
@@ -343,6 +344,7 @@ confirmada.
 | Banco de dados | MySQL 8.4 e MySQL2 | Persistência relacional e pool de conexões |
 | Testes | Vitest | Testes automatizados do front-end, da API e de integração com MySQL |
 | Versionamento | Git e GitHub | Histórico e colaboração do projeto |
+| Hospedagem | Render e Aiven | Aplicação Node.js publicada e MySQL gerenciado com TLS |
 
 ---
 
@@ -512,8 +514,23 @@ contra excesso de tentativas. O servidor Express usa a porta definida em
 
 ### Publicação (hospedagem)
 
+O sistema está publicado em
+[https://sgp-catolica.onrender.com](https://sgp-catolica.onrender.com): a
+aplicação roda no **Render** (plano gratuito) e o banco no **Aiven for MySQL**
+(plano gratuito, conexão TLS). A decisão está registrada na
+[ADR-003](docs/adr/ADR-003-hospedagem-render-aiven.md).
+
+- Cada push na branch `main` gera um novo deploy automático no Render.
+- No plano gratuito, o serviço hiberna após cerca de 15 minutos sem acesso; o
+  primeiro acesso seguinte leva aproximadamente um minuto.
+- Para conferir a conexão com o banco, acesse
+  [/api/health](https://sgp-catolica.onrender.com/api/health).
+- Para usar, crie uma conta de professor em **Criar conta de professor** e
+  entre com ela.
+
 O Express entrega o front-end compilado (`dist/`) e a API no mesmo endereço,
-então basta um serviço Node.js e um banco MySQL hospedado.
+então basta um serviço Node.js e um banco MySQL hospedado. Para reproduzir a
+publicação em outro ambiente:
 
 1. Crie o banco MySQL no provedor e anote host, porta, usuário, senha e nome.
 2. Aplique o schema **uma única vez** (o comando recria as tabelas e apaga os
@@ -528,7 +545,7 @@ então basta um serviço Node.js e um banco MySQL hospedado.
 3. No serviço Node.js, configure:
    - Build: `npm ci --include=dev && npm run build`
    - Start: `npm start`
-   - Variáveis: `NODE_ENV=production`, `TRUST_PROXY_HOPS=1`, `DB_HOST`,
+   - Variáveis: `NODE_ENV=production`, `NODE_VERSION=22`, `TRUST_PROXY_HOPS=1`, `DB_HOST`,
      `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `DB_SSL=true` e, se o
      provedor exigir, `DB_SSL_CA`.
 4. Acesse a URL publicada, crie a conta de professor em `#/cadastro` e confira
