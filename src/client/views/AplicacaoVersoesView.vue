@@ -1,7 +1,8 @@
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import QRCode from 'qrcode'
 
 import { reportUnauthorized } from '../services/apiClient'
 
@@ -17,6 +18,49 @@ const carregando = ref(true)
 const carregandoGabarito = ref(false)
 const erro = ref('')
 const erroGabarito = ref('')
+const atribuicoes = ref([])
+const imagensQr = ref({})
+const copiado = ref('')
+
+// Com identificação, cada aluno tem um QR Code; sem identificação, o QR é da versão.
+const codigosCorrecao = computed(() => {
+  if (atribuicoes.value.length) {
+    return atribuicoes.value.map((atribuicao) => ({
+      chave: `aluno-${atribuicao.id}`,
+      titulo: atribuicao.studentName,
+      detalhe: `Matrícula ${atribuicao.registration} · Versão ${atribuicao.versionNumber}`,
+      codigo: atribuicao.qrCodePayload
+    }))
+  }
+
+  return versoes.value.map((versao) => ({
+    chave: `versao-${versao.id}`,
+    titulo: `Versão ${versao.versionNumber}`,
+    detalhe: 'Prova sem identificação do aluno',
+    codigo: versao.qrCodePayload
+  }))
+})
+
+async function gerarImagensQr() {
+  const imagens = {}
+
+  for (const item of codigosCorrecao.value) {
+    if (item.codigo) {
+      imagens[item.chave] = await QRCode.toDataURL(item.codigo, { margin: 1, width: 160 })
+    }
+  }
+
+  imagensQr.value = imagens
+}
+
+async function copiarCodigo(item) {
+  try {
+    await navigator.clipboard.writeText(item.codigo)
+    copiado.value = item.chave
+  } catch {
+    copiado.value = ''
+  }
+}
 
 async function requisicaoJson(url) {
   const response = await fetch(url, {
@@ -59,6 +103,13 @@ async function carregarVersoes() {
     )
 
     versoes.value = resultado.data ?? []
+
+    const resultadoAtribuicoes = await requisicaoJson(
+      `/api/application-versions/applications/${aplicacaoId}/assignments`
+    )
+
+    atribuicoes.value = resultadoAtribuicoes.data ?? []
+    await gerarImagensQr()
   } catch (error) {
     erro.value = error.message || 'Não foi possível carregar as versões.'
   } finally {
@@ -67,8 +118,6 @@ async function carregarVersoes() {
 }
 
 async function abrirGabarito(versao) {
-  console.log('CLIQUE NO GABARITO', versao.id)
-
   carregandoGabarito.value = true
   erroGabarito.value = ''
   versaoSelecionada.value = versao
@@ -170,6 +219,44 @@ onMounted(carregarVersoes)
         </button>
       </article>
     </div>
+
+    <section
+      v-if="!carregando && codigosCorrecao.length"
+      class="codigos"
+      aria-labelledby="codigos-titulo"
+    >
+      <h2 id="codigos-titulo">QR Codes para correção</h2>
+      <p class="codigos__ajuda">
+        Use o QR Code (ou copie o código) na tela "Corrigir por QR Code".
+      </p>
+
+      <div class="codigos__lista">
+        <article
+          v-for="item in codigosCorrecao"
+          :key="item.chave"
+          class="codigo"
+        >
+          <img
+            v-if="imagensQr[item.chave]"
+            :src="imagensQr[item.chave]"
+            :alt="`QR Code de ${item.titulo}`"
+            width="120"
+            height="120"
+          >
+          <div>
+            <strong>{{ item.titulo }}</strong>
+            <p>{{ item.detalhe }}</p>
+            <button
+              type="button"
+              class="botao botao--secundario"
+              @click="copiarCodigo(item)"
+            >
+              {{ copiado === item.chave ? 'Código copiado' : 'Copiar código' }}
+            </button>
+          </div>
+        </article>
+      </div>
+    </section>
 
     <section
       v-if="versaoSelecionada"
@@ -288,6 +375,44 @@ h1 {
 
 .gabarito li {
   margin: 12px 0;
+}
+
+.codigos {
+  margin-top: 28px;
+  max-width: 900px;
+}
+
+.codigos__ajuda {
+  margin: 0 0 16px;
+  color: var(--color-muted, #5b6b69);
+}
+
+.codigos__lista {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.codigo {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid var(--color-border, #d8e1df);
+  border-radius: 10px;
+  background: var(--color-surface, #fff);
+}
+
+.codigo p {
+  margin: 4px 0 10px;
+  font-size: 0.9rem;
+}
+
+.botao--secundario {
+  padding: 8px 12px;
+  border: 1px solid var(--color-primary, #0f5e56);
+  background: transparent;
+  color: var(--color-primary, #0f5e56);
 }
 
 .erro {

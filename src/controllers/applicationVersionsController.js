@@ -47,8 +47,25 @@ async function list(request, response, next) {
     }
 }
 
+async function listAssignments(request, response, next) {
+    try {
+        const assignments = await service.listAssignments(
+            request.params.applicationId,
+            request.teacher?.id
+        );
+
+        return response.json({
+            data: assignments,
+            meta: { total: assignments.length }
+        });
+    } catch (error) {
+        return next(error);
+    }
+}
+
 module.exports = {
     getAnswerKey,
     generate,
-    list
+    list,
+    listAssignments
 };

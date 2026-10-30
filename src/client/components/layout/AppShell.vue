@@ -1,5 +1,5 @@
 <script setup>
-import { BookOpenCheck, ClipboardList, GraduationCap, Home, ListChecks, LogOut, Users } from '@lucide/vue';
+import { BarChart3, BookOpenCheck, ClipboardList, GraduationCap, Home, ListChecks, LogOut, Users } from '@lucide/vue';
 import { ref } from 'vue';
 import { RouterLink, RouterView, useRouter } from 'vue-router';
 
@@ -61,7 +61,11 @@ const handleLogout = async () => {
                     </RouterLink>
                     <RouterLink to="/questoes" class="main-navigation__link">
                         <BookOpenCheck :size="18" :stroke-width="1.8" />
-                        <span>Banco de questões</span>
+                        <span>Questões</span>
+                    </RouterLink>
+                    <RouterLink to="/relatorios" class="main-navigation__link">
+                        <BarChart3 :size="18" :stroke-width="1.8" />
+                        <span>Relatórios</span>
                     </RouterLink>
                 </nav>
 

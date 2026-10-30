@@ -5,7 +5,7 @@ import {
     exams,
     examVersions,
     questions
-} from './mockData';
+} from './testFixtures';
 
 import {
     normalizeTags,

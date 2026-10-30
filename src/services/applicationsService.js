@@ -40,6 +40,14 @@ async function create(teacherId, body) {
       throw new ApiError(404, 'NOT_FOUND', 'Prova não encontrada.');
     }
 
+    if (exam.status === 'archived' || exam.status === 'closed') {
+      throw new ApiError(
+        409,
+        'CONFLICT',
+        'Prova arquivada não pode receber novas aplicações.'
+      );
+    }
+
     const classItem = await repository.findOwnedClass(
       classId,
       ownerId,
@@ -54,6 +62,8 @@ async function create(teacherId, body) {
       { examId, classId, teacherId: ownerId },
       connection
     );
+
+    await repository.markExamReady(examId, connection);
 
     const application = await repository.findApplication(
       applicationId,

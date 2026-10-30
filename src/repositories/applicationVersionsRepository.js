@@ -42,11 +42,34 @@ async function listVersions(applicationId, teacherId, db = pool) {
             ev.shuffle_questions AS shuffleQuestions,
             ev.shuffle_alternatives AS shuffleAlternatives,
             ev.with_student_identification AS withStudentIdentification,
+            ev.qr_code_payload AS qrCodePayload,
             ev.created_at AS createdAt
          FROM exam_versions ev
          INNER JOIN applications a ON a.id = ev.application_id
          WHERE a.id = ? AND a.teacher_id = ?
          ORDER BY ev.version_number ASC`,
+        [applicationId, teacherId]
+    );
+
+    return rows;
+}
+
+async function listAssignments(applicationId, teacherId, db = pool) {
+    const [rows] = await db.execute(
+        `SELECT
+            ea.id,
+            ea.exam_version_id AS versionId,
+            ev.version_number AS versionNumber,
+            s.id AS studentId,
+            s.full_name AS studentName,
+            s.registration,
+            ea.qr_code_payload AS qrCodePayload
+         FROM exam_assignments ea
+         INNER JOIN exam_versions ev ON ev.id = ea.exam_version_id
+         INNER JOIN applications a ON a.id = ev.application_id
+         INNER JOIN students s ON s.id = ea.student_id
+         WHERE a.id = ? AND a.teacher_id = ?
+         ORDER BY s.full_name ASC, s.id ASC`,
         [applicationId, teacherId]
     );
 
@@ -71,7 +94,7 @@ async function generateVersions(applicationId, teacherId, configs) {
         await db.beginTransaction();
 
         const [applications] = await db.execute(
-            `SELECT a.id, a.exam_id AS examId
+            `SELECT a.id, a.exam_id AS examId, a.class_id AS classId
              FROM applications a
              WHERE a.id = ? AND a.teacher_id = ?
              FOR UPDATE`,
@@ -142,14 +165,31 @@ async function generateVersions(applicationId, teacherId, configs) {
             }
         }
 
-        const [maxRows] = await db.execute(
-            `SELECT COALESCE(MAX(version_number), 0) AS lastNumber
-             FROM exam_versions
-             WHERE application_id = ?`,
+        // Regenerar só é permitido enquanto não houver correção confirmada.
+        const [confirmedRows] = await db.execute(
+            `SELECT 1
+             FROM corrections c
+             INNER JOIN exam_versions ev ON ev.id = c.exam_version_id
+             WHERE ev.application_id = ? AND c.status = 'confirmed'
+             LIMIT 1`,
             [applicationId]
         );
 
-        let versionNumber = Number(maxRows[0].lastNumber) + 1;
+        if (confirmedRows.length) {
+            const error = new Error(
+                'Esta aplicação já possui correções confirmadas. Crie uma nova aplicação para gerar outras versões.'
+            );
+            error.statusCode = 409;
+            throw error;
+        }
+
+        // A nova geração substitui as versões (e QR Codes) anteriores.
+        await db.execute(
+            'DELETE FROM exam_versions WHERE application_id = ?',
+            [applicationId]
+        );
+
+        let versionNumber = 1;
         const created = [];
 
         for (const config of configs) {
@@ -237,11 +277,59 @@ async function generateVersions(applicationId, teacherId, configs) {
                 id: versionId,
                 applicationId,
                 versionNumber,
-                publicCode
+                publicCode,
+                withStudentIdentification: config.identificacao,
+                assignedStudents: 0
             });
 
             versionNumber++;
         }
+
+        // Com identificação: cada aluno ativo da turma recebe uma versão e um QR Code próprio.
+        const identifiedVersions = created.filter((version) => version.withStudentIdentification);
+
+        if (identifiedVersions.length > 0) {
+            const [students] = await db.execute(
+                `SELECT s.id
+                 FROM class_students cs
+                 INNER JOIN students s ON s.id = cs.student_id
+                 WHERE cs.class_id = ? AND cs.status = 'active' AND s.status = 'active'
+                 ORDER BY s.full_name ASC, s.id ASC`,
+                [applications[0].classId]
+            );
+
+            if (students.length > 0) {
+                const assignmentValues = students.map((student, index) => {
+                    const version = identifiedVersions[index % identifiedVersions.length];
+                    version.assignedStudents++;
+
+                    return [
+                        version.id,
+                        student.id,
+                        JSON.stringify({
+                            applicationId,
+                            versionNumber: version.versionNumber,
+                            studentId: student.id,
+                            code: crypto.randomUUID()
+                        })
+                    ];
+                });
+
+                await db.query(
+                    `INSERT INTO exam_assignments (
+                        exam_version_id,
+                        student_id,
+                        qr_code_payload
+                    ) VALUES ?`,
+                    [assignmentValues]
+                );
+            }
+        }
+
+        await db.execute(
+            `UPDATE applications SET status = 'generated' WHERE id = ?`,
+            [applicationId]
+        );
 
         await db.commit();
         return created;
@@ -256,5 +344,6 @@ async function generateVersions(applicationId, teacherId, configs) {
 module.exports = {
     findAnswerKey,
     generateVersions,
-    listVersions
+    listVersions,
+    listAssignments
 };

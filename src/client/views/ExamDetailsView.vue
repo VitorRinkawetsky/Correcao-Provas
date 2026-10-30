@@ -4,7 +4,7 @@ import { onMounted, ref } from 'vue';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
 
 import StatusBadge from '../components/ui/StatusBadge.vue';
-import { formatScore } from '../data/mockData';
+import { formatScore } from '../utils/format';
 import { archiveExam, getExamDetails } from '../services/examApi';
 
 const route = useRoute();

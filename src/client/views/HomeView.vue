@@ -4,7 +4,7 @@ import { onMounted, ref } from 'vue';
 import { RouterLink } from 'vue-router';
 
 import StatusBadge from '../components/ui/StatusBadge.vue';
-import { formatScore } from '../data/mockData';
+import { formatScore } from '../utils/format';
 import { listExams } from '../services/examApi';
 
 const featuredExam = ref(null);

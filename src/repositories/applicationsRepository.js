@@ -3,13 +3,22 @@ const { pool } = require('../config/database');
 
 async function findOwnedExam(examId, teacherId, db = pool) {
   const [rows] = await db.execute(
-    `SELECT id, title
+    `SELECT id, title, status
      FROM exams
-     WHERE id = ? AND teacher_id = ?`,
+     WHERE id = ? AND teacher_id = ?
+     FOR UPDATE`,
     [examId, teacherId]
   );
 
   return rows[0] ?? null;
+}
+
+// A primeira aplicação tira a prova do rascunho.
+async function markExamReady(examId, db = pool) {
+  await db.execute(
+    `UPDATE exams SET status = 'ready' WHERE id = ? AND status = 'draft'`,
+    [examId]
+  );
 }
 
 async function findOwnedClass(classId, teacherId, db = pool) {
@@ -76,6 +85,7 @@ async function listApplications(teacherId, db = pool) {
 
 module.exports = {
   findOwnedExam,
+  markExamReady,
   findOwnedClass,
   insertApplication,
   findApplication,

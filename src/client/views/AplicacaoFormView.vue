@@ -1,11 +1,12 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { listExams } from '../services/examApi'
 import { getClasses } from '../services/classApi'
 import { createApplication } from '../services/applicationApi'
 
+const route = useRoute()
 const router = useRouter()
 
 const provas = ref([])
@@ -23,13 +24,20 @@ onMounted(async () => {
       getClasses()
     ])
 
-    provas.value = exams
+    // Provas arquivadas não podem receber novas aplicações.
+    provas.value = exams.filter(
+      prova => prova.status !== 'archived' && prova.status !== 'closed'
+    )
     turmas.value = classes.filter(
       turma => turma.status === 'active'
     )
 
-    if (provas.value.length) {
-      provaSelecionada.value = String(provas.value[0].id)
+    const provaDaRota = provas.value.find(
+      prova => String(prova.id) === String(route.query.examId)
+    )
+
+    if (provaDaRota || provas.value.length) {
+      provaSelecionada.value = String((provaDaRota || provas.value[0]).id)
     }
 
     if (turmas.value.length) {

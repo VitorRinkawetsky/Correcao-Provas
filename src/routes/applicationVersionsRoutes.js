@@ -18,6 +18,11 @@ router.get(
     controller.list
 );
 
+router.get(
+    '/applications/:applicationId/assignments',
+    controller.listAssignments
+);
+
 router.get('/:versionId/answer-key', controller.getAnswerKey);
 
 router.use(handleApiError);

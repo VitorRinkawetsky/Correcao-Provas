@@ -9,7 +9,7 @@ import {
     getExamDetails,
     getQuestionShortLabel,
     updateExam
-} from './mockData';
+} from './testFixtures';
 
 describe('dados usados nas telas existentes', () => {
     it('monta os detalhes da primeira prova', () => {

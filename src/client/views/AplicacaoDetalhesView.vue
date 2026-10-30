@@ -3,6 +3,7 @@
 import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import StatusBadge from '../components/ui/StatusBadge.vue'
+import { statusLabels } from '../data/statusCatalog'
 import { getApplication } from '../services/applicationApi'
 
 const route = useRoute()
@@ -79,7 +80,12 @@ function abrirCorrecoesSemAluno() {
 }
 
 function abrirResultados() {
-  console.log('Integração de resultados pendente')
+  if (!aplicacao.value?.id) return
+
+  router.push({
+    name: 'reports',
+    query: { applicationId: aplicacao.value.id }
+  })
 }
 </script>
 
@@ -112,7 +118,7 @@ function abrirResultados() {
         <p><strong>Prova:</strong> {{ aplicacao.examTitle }}</p>
         <p><strong>Turma:</strong> {{ aplicacao.className }}</p>
         <p><strong>ID:</strong> {{ aplicacao.id }}</p>
-        <p><strong>Status:</strong> {{ aplicacao.status }}</p>
+        <p><strong>Status:</strong> {{ statusLabels[aplicacao.status] || aplicacao.status }}</p>
       </section>
 
       <section class="acoes-aplicacao">

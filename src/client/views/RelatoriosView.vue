@@ -141,7 +141,10 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue';
+import { useRoute } from 'vue-router';
 import { getReport, getReportFilters } from '../services/reportsApi';
+
+const route = useRoute();
 
 const loading = ref(false);
 const errorMessage = ref('');
@@ -281,6 +284,16 @@ onMounted(async () => {
 
     try {
         await loadFilters();
+
+        // Vindo de "Resultados" da aplicação, já abre filtrado por ela.
+        const fromApplication = applications.value.find(
+            item => String(item.id) === String(route.query.applicationId)
+        );
+        if (fromApplication) {
+            filters.classId = String(fromApplication.classId);
+            filters.applicationId = String(fromApplication.id);
+        }
+
         await loadReport();
     } catch (error) {
         errorMessage.value = error.message || 'Não foi possível carregar os relatórios.';

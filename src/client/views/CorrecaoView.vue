@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import {
     createCorrection,
@@ -173,13 +173,17 @@ async function submitCorrection() {
         const result = isPersistedCorrection.value
             ? await updateCorrection(correctionId.value, payload)
             : await createCorrection(payload);
-        message.value = `Correcao salva. Nota: ${result.totalScore}`;
+        const savedMessage = `Correcao salva. Nota: ${result.totalScore}`;
         if (!isPersistedCorrection.value && result.id) {
-            router.push({
+            // A mesma tela é reaproveitada; o watch de correctionId recarrega os dados salvos.
+            await router.push({
                 name: 'correction-details',
                 params: { correctionId: result.id }
             });
+        } else {
+            await loadCorrection();
         }
+        message.value = savedMessage;
     } catch (error) {
         errorMessage.value = error.message || 'Nao foi possivel salvar a correcao.';
     } finally {
@@ -187,8 +191,18 @@ async function submitCorrection() {
     }
 }
 
+function answerLetter(question) {
+    const index = question.alternatives.findIndex(
+        (alternative) => Number(alternative.id) === Number(question.selectedAlternativeId)
+    );
+    return index >= 0 ? String.fromCharCode(65 + index) : 'em branco';
+}
+
 onMounted(() => {
     if (isPersistedCorrection.value) loadCorrection();
+});
+watch(correctionId, (id, previousId) => {
+    if (id && id !== previousId) loadCorrection();
 });
 onBeforeUnmount(stopScanner);
 </script>
@@ -268,7 +282,7 @@ onBeforeUnmount(stopScanner);
                     </label>
                     <p v-if="isPersistedCorrection" class="resultado-questao">
                         Resposta:
-                        {{ question.selectedAlternativeId || 'em branco' }}
+                        {{ answerLetter(question) }}
                         · {{ question.isCorrect ? 'correta' : 'incorreta' }}
                         · {{ Number(question.awardedScore || 0).toFixed(2) }} pts
                     </p>

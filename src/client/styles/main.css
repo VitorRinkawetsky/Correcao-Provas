@@ -185,7 +185,26 @@ h2 {
     color: var(--color-muted);
     font-size: 0.9rem;
     font-weight: 650;
+    white-space: nowrap;
     transition: color 160ms ease, background-color 160ms ease;
+}
+
+@media (max-width: 1240px) {
+    .main-navigation__link {
+        padding: 0 var(--space-3);
+    }
+}
+
+/* Em telas médias o menu mostra só os ícones; o texto continua para leitores de tela. */
+@media (max-width: 1100px) {
+    .main-navigation__link span {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+    }
 }
 
 .main-navigation__link:hover {
@@ -1608,9 +1627,6 @@ h2 {
         padding-inline: 11px;
     }
 
-    .main-navigation__link span {
-        display: none;
-    }
 
     .teacher-account {
         padding-left: var(--space-2);

@@ -3,7 +3,7 @@ import { ArrowLeft, GripVertical, Plus, Save, Search, Trash2, X } from '@lucide/
 import { computed, onMounted, reactive, ref } from 'vue';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
 
-import { formatScore } from '../data/mockData';
+import { formatScore } from '../utils/format';
 import {
     createExam,
     getExamDetails,

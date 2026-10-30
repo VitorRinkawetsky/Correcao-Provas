@@ -97,6 +97,10 @@ async function generateVersions(applicationId, teacherId, body) {
       throw new ApiError(400, 'VALIDATION_ERROR', error.message);
     }
 
+    if (error.statusCode === 409) {
+      throw new ApiError(409, 'CONFLICT', error.message);
+    }
+
     throw error;
   }
 }
@@ -124,8 +128,19 @@ async function listVersions(applicationId, teacherId) {
   return repository.listVersions(id, ownerId);
 }
 
+async function listAssignments(applicationId, teacherId) {
+  const id = Number(applicationId);
+
+  if (!Number.isInteger(id) || id <= 0) {
+    throw new ApiError(400, 'VALIDATION_ERROR', 'ID da aplicação inválido.');
+  }
+
+  return repository.listAssignments(id, Number(teacherId));
+}
+
 module.exports = {
   getAnswerKey,
   generateVersions,
   listVersions,
+  listAssignments,
 };

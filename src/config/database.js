@@ -1,6 +1,19 @@
 const mysql = require('mysql2/promise');
 
+// Bancos gerenciados na nuvem exigem TLS. DB_SSL_CA aceita o certificado PEM
+// com quebras de linha escritas como \n (formato de variável de ambiente).
+const buildSslOptions = () => {
+    if (process.env.DB_SSL !== 'true') return undefined;
+
+    const ca = process.env.DB_SSL_CA
+        ? process.env.DB_SSL_CA.replace(/\\n/g, '\n')
+        : undefined;
+
+    return { rejectUnauthorized: true, ...(ca ? { ca } : {}) };
+};
+
 const pool = mysql.createPool({
+    ssl: buildSslOptions(),
     host: process.env.DB_HOST || 'localhost',
     port: Number(process.env.DB_PORT || 3307),
     user: process.env.DB_USER || 'sgp',

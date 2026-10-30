@@ -1,3 +1,4 @@
+// Dados fictícios usados apenas pelos testes automatizados. Nenhuma tela importa este arquivo.
 import { reactive } from 'vue';
 
 export const professors = [
