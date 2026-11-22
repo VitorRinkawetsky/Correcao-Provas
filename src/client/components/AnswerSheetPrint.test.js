@@ -36,6 +36,8 @@ describe('cartao-resposta imprimivel', () => {
             cy: '330',
             r: '18'
         });
+        expect(wrapper.findAll('[data-row] .answer-sheet__letter')).toHaveLength(0);
+        expect(wrapper.findAll('.answer-sheet__column-letter')).toHaveLength(3);
         expect(wrapper.text()).toContain('Ana Souza · 20260042');
     });
 

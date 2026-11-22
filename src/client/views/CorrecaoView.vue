@@ -161,21 +161,23 @@ async function processImageSource(source) {
         if (!requestedCode) {
             throw new Error('QR Code não encontrado. Informe o código manualmente e refaça a leitura.');
         }
-        if (!context.value || requestedCode !== loadedCode.value) {
-            const data = await getCorrectionContext(requestedCode);
-            applyContext(data, requestedCode);
+        let targetContext = context.value;
+        const contextChanged = !targetContext || requestedCode !== loadedCode.value;
+        if (contextChanged) {
+            targetContext = await getCorrectionContext(requestedCode);
         }
 
-        const result = recognizeAnswerSheet(imageData, context.value.questions);
+        const result = recognizeAnswerSheet(imageData, targetContext.questions);
         const nextAnswers = {};
         result.questions.forEach((readResult) => {
             if (readResult.status !== 'marked') return;
-            const question = context.value.questions.find(
+            const question = targetContext.questions.find(
                 (item) => Number(item.questionId) === Number(readResult.questionId)
             );
             const alternative = question?.alternatives?.[readResult.selectedIndex];
             if (alternative) nextAnswers[question.questionId] = alternative.id;
         });
+        if (contextChanged) applyContext(targetContext, requestedCode);
         answers.value = nextAnswers;
         recognition.value = result;
         savedScore.value = null;
@@ -277,7 +279,7 @@ async function submitCorrection() {
     message.value = '';
     try {
         const payload = {
-            ...(!isPersistedCorrection.value ? { qrCodePayload: code.value } : {}),
+            ...(!isPersistedCorrection.value ? { qrCodePayload: loadedCode.value } : {}),
             studentName: studentName.value,
             studentRegistration: studentRegistration.value,
             notes: context.value?.notes || '',

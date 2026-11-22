@@ -181,7 +181,15 @@ function bestComponentInRegion(binary, width, height, region) {
             const componentHeight = maxY - minY + 1;
             const aspect = componentWidth / componentHeight;
             const fillRatio = area / (componentWidth * componentHeight);
+            const touchesImageEdge = (
+                minX <= 1
+                || minY <= 1
+                || maxX >= width - 2
+                || maxY >= height - 2
+            );
             if (
+                touchesImageEdge
+                ||
                 componentWidth < minimumSide
                 || componentHeight < minimumSide
                 || aspect < 0.62

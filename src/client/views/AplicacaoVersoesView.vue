@@ -1,6 +1,6 @@
 
 <script setup>
-import { computed, ref, onMounted, nextTick } from 'vue'
+import { computed, ref, onBeforeUnmount, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import QRCode from 'qrcode'
 
@@ -160,6 +160,8 @@ async function abrirGabarito(versao) {
 
 function baixarPdf() {
   alvoImpressao.value = 'gabarito'
+  document.body.classList.add('answer-key-printing')
+  window.addEventListener('afterprint', limparModoImpressao, { once: true })
   window.print()
 }
 
@@ -194,8 +196,14 @@ async function abrirCartao(item) {
 
 async function imprimirCartao() {
   alvoImpressao.value = 'cartao'
+  document.body.classList.add('answer-sheet-printing')
+  window.addEventListener('afterprint', limparModoImpressao, { once: true })
   await nextTick()
   window.print()
+}
+
+function limparModoImpressao() {
+  document.body.classList.remove('answer-sheet-printing', 'answer-key-printing')
 }
 
 function voltarDetalhes() {
@@ -206,6 +214,7 @@ function voltarDetalhes() {
 }
 
 onMounted(carregarVersoes)
+onBeforeUnmount(limparModoImpressao)
 </script>
 
 <template>
@@ -538,6 +547,11 @@ h1 {
   .pagina.imprimir-cartao,
   .pagina.imprimir-gabarito {
     padding: 0;
+  }
+
+  .pagina.imprimir-cartao .cartao-impressao {
+    max-width: none;
+    margin: 0;
   }
 
   .pagina.imprimir-gabarito .voltar,

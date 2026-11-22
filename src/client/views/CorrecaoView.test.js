@@ -224,4 +224,67 @@ describe('correcao por QR Code', () => {
         }));
         expect(wrapper.text()).toContain('Nota: 1.25');
     });
+
+    it('preserva contexto e respostas anteriores quando uma nova foto falha', async () => {
+        const wrapper = mount(CorrecaoView);
+        await wrapper.get('#codigo-prova').setValue('QR-ABC');
+        await wrapper.get('.codigo-form').trigger('submit');
+        await flushPromises();
+        await wrapper.get('input[value="1001"]').setValue(true);
+
+        getCorrectionContext.mockResolvedValueOnce({
+            applicationId: 9,
+            examVersionId: 13,
+            versionNumber: 2,
+            examTitle: 'Outra prova',
+            assignedStudentId: 32,
+            assignedStudentName: 'Beatriz Lima',
+            assignedStudentRegistration: '20260099',
+            questions: [{
+                questionId: 202,
+                printedOrder: 1,
+                statement: 'Outra questao',
+                score: 2,
+                alternatives: [
+                    { id: 2001, text: 'Alternativa A' },
+                    { id: 2002, text: 'Alternativa B' }
+                ]
+            }]
+        });
+        detectQrCode.mockResolvedValueOnce('QR-NOVO');
+        recognizeAnswerSheet.mockImplementationOnce(() => {
+            throw new Error('Não foi possível ler o cartão. Refaça a foto.');
+        });
+        const fileInput = wrapper.get('input[type="file"]');
+        Object.defineProperty(fileInput.element, 'files', {
+            configurable: true,
+            value: [new File(['foto'], 'cortada.jpg', { type: 'image/jpeg' })]
+        });
+
+        await fileInput.trigger('change');
+        await flushPromises();
+
+        expect(wrapper.get('#codigo-prova').element.value).toBe('QR-ABC');
+        expect(wrapper.findAll('.identificacao input')[0].element.value).toBe('Ana Souza');
+        expect(wrapper.findAll('.identificacao input')[1].element.value).toBe('20260042');
+        expect(wrapper.get('input[value="1001"]').element.checked).toBe(true);
+        expect(wrapper.text()).toContain('Refaça a foto');
+    });
+
+    it('salva com o QR do contexto carregado mesmo se o campo for editado depois', async () => {
+        const wrapper = mount(CorrecaoView);
+        await wrapper.get('#codigo-prova').setValue('QR-ABC');
+        await wrapper.get('.codigo-form').trigger('submit');
+        await flushPromises();
+        await wrapper.get('input[value="1001"]').setValue(true);
+        await wrapper.get('#codigo-prova').setValue('QR-NAO-CARREGADO');
+
+        await wrapper.get('.correcao-form').trigger('submit');
+        await flushPromises();
+
+        expect(createCorrection).toHaveBeenCalledWith(expect.objectContaining({
+            qrCodePayload: 'QR-ABC',
+            answers: [{ questionId: 101, selectedAlternativeId: 1001 }]
+        }));
+    });
 });

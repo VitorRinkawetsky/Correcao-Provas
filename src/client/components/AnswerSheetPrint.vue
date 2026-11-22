@@ -14,6 +14,10 @@ const props = defineProps({
 const geometry = computed(() => getAnswerSheetGeometry(
     props.questions.map((question) => Number(question.alternativeCount))
 ));
+const columnBubbles = computed(() => geometry.value.rows.reduce(
+    (largest, row) => (row.bubbles.length > largest.length ? row.bubbles : largest),
+    []
+));
 </script>
 
 <template>
@@ -53,6 +57,13 @@ const geometry = computed(() => getAnswerSheetGeometry(
             <text x="360" y="280" class="answer-sheet__instruction">
                 Preencha completamente um círculo por questão.
             </text>
+            <text
+                v-for="bubble in columnBubbles"
+                :key="`column-${bubble.letter}`"
+                :x="bubble.x"
+                y="296"
+                class="answer-sheet__column-letter"
+            >{{ bubble.letter }}</text>
 
             <g
                 v-for="(row, rowIndex) in geometry.rows"
@@ -76,11 +87,6 @@ const geometry = computed(() => getAnswerSheetGeometry(
                         stroke="black"
                         stroke-width="3"
                     />
-                    <text
-                        :x="bubble.x"
-                        :y="bubble.y + 7"
-                        class="answer-sheet__letter"
-                    >{{ bubble.letter }}</text>
                 </g>
             </g>
 
@@ -110,7 +116,7 @@ const geometry = computed(() => getAnswerSheetGeometry(
 .answer-sheet__meta { font-size: 23px; }
 .answer-sheet__instruction { font-size: 18px; }
 .answer-sheet__number { font-size: 24px; font-weight: 700; text-anchor: end; }
-.answer-sheet__letter { font-size: 20px; font-weight: 700; text-anchor: middle; pointer-events: none; }
+.answer-sheet__column-letter { font-size: 20px; font-weight: 700; text-anchor: middle; }
 .answer-sheet__footer { font-size: 17px; text-anchor: middle; }
 
 @media print {

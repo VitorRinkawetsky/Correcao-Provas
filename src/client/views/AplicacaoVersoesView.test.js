@@ -67,6 +67,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+    document.body.classList.remove('answer-sheet-printing');
     vi.unstubAllGlobals();
 });
 
@@ -92,5 +93,17 @@ describe('cartao-resposta da versao', () => {
                 { order: 2, alternativeCount: 2 }
             ]
         });
+
+        const print = vi.spyOn(window, 'print').mockImplementation(() => {});
+        const printButton = wrapper.findAll('button').find(
+            (item) => item.text() === 'Imprimir / salvar PDF'
+        );
+        await printButton.trigger('click');
+        await flushPromises();
+
+        expect(document.body.classList.contains('answer-sheet-printing')).toBe(true);
+        expect(print).toHaveBeenCalledOnce();
+        window.dispatchEvent(new Event('afterprint'));
+        expect(document.body.classList.contains('answer-sheet-printing')).toBe(false);
     });
 });

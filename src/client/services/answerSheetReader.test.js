@@ -81,6 +81,18 @@ function syntheticSheet(alternativeCounts, markedByRow = {}) {
     return image;
 }
 
+function cropImage(image, { left = 0, top = 0, right = 0, bottom = 0 }) {
+    const width = image.width - left - right;
+    const height = image.height - top - bottom;
+    const data = new Uint8ClampedArray(width * height * 4);
+    for (let y = 0; y < height; y += 1) {
+        const sourceStart = (((y + top) * image.width) + left) * 4;
+        const targetStart = y * width * 4;
+        data.set(image.data.subarray(sourceStart, sourceStart + (width * 4)), targetStart);
+    }
+    return { data, width, height };
+}
+
 function questions(alternativeCounts) {
     return alternativeCounts.map((alternativeCount, index) => ({
         questionId: 100 + index,
@@ -166,5 +178,14 @@ describe('leitura automatica do cartao-resposta', () => {
 
         expect(() => recognizeAnswerSheet(image, questions(counts))).toThrow(AnswerSheetReadError);
         expect(() => recognizeAnswerSheet(image, questions(counts))).toThrow(/Refaça a foto/);
+    });
+
+    it('rejeita marcador parcialmente cortado pela borda da foto', () => {
+        const counts = Array(5).fill(5);
+        const complete = syntheticSheet(counts, { 0: [2] });
+        const cropped = cropImage(complete, { left: 57 });
+
+        expect(() => recognizeAnswerSheet(cropped, questions(counts))).toThrow(AnswerSheetReadError);
+        expect(() => recognizeAnswerSheet(cropped, questions(counts))).toThrow(/Refaça a foto/);
     });
 });
