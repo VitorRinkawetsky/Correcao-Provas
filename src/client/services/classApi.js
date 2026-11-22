@@ -9,6 +9,7 @@ const request = async (path = '', options = {}) => {
     if (!response.ok || !payload || !Object.hasOwn(payload, 'data')) {
         const error = new Error(payload?.error?.message || 'Nao foi possivel acessar as turmas');
         error.code = payload?.error?.code;
+        error.status = response.status;
         throw error;
     }
     return payload.data;

@@ -121,8 +121,16 @@ const handleSubmit = async () => {
         titleError.value = true;
         return;
     }
+    if (formQuestions.value.length < 1) {
+        submitError.value = 'Adicione ao menos uma questao a prova.';
+        return;
+    }
     if (formQuestions.value.length > 20) {
         submitError.value = 'A prova pode possuir no maximo 20 questoes.';
+        return;
+    }
+    if (formQuestions.value.some((item) => !(Number(item.score) > 0))) {
+        submitError.value = 'A pontuacao de cada questao deve ser maior que zero.';
         return;
     }
     titleError.value = false;

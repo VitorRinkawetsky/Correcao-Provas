@@ -36,6 +36,7 @@ onMounted(async () => {
 
         <p v-if="loading" class="empty-state">Carregando provas...</p>
         <p v-else-if="errorMessage" class="empty-state">{{ errorMessage }}</p>
+        <p v-else-if="!exams.length" class="empty-state">Nenhuma prova cadastrada.</p>
 
         <ul v-else class="exam-list">
             <li v-for="exam in exams" :key="exam.id" class="exam-list-card">

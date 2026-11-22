@@ -3,6 +3,8 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
+import { requestJson } from '../services/apiClient'
+
 const route = useRoute()
 const router = useRouter()
 
@@ -16,41 +18,14 @@ const carregandoGabarito = ref(false)
 const erro = ref('')
 const erroGabarito = ref('')
 
-async function requisicaoJson(url) {
-  const response = await fetch(url, {
-    credentials: 'include'
-  })
-
-  const texto = await response.text()
-  let resultado = {}
-
-  try {
-    resultado = texto ? JSON.parse(texto) : {}
-  } catch {
-    resultado = { message: texto }
-  }
-
-  if (!response.ok) {
-    throw new Error(
-      resultado.message ||
-      resultado.error ||
-      `Erro HTTP ${response.status}`
-    )
-  }
-
-  return resultado
-}
-
 async function carregarVersoes() {
   carregando.value = true
   erro.value = ''
 
   try {
-    const resultado = await requisicaoJson(
+    versoes.value = await requestJson(
       `/api/application-versions/applications/${aplicacaoId}`
-    )
-
-    versoes.value = resultado.data ?? []
+    ) ?? []
   } catch (error) {
     erro.value = error.message || 'Não foi possível carregar as versões.'
   } finally {
@@ -59,29 +34,26 @@ async function carregarVersoes() {
 }
 
 async function abrirGabarito(versao) {
-  console.log('CLIQUE NO GABARITO', versao.id)
-
   carregandoGabarito.value = true
   erroGabarito.value = ''
   versaoSelecionada.value = versao
   gabarito.value = []
 
   try {
-    const resultado = await requisicaoJson(
+    const resultado = await requestJson(
       `/api/application-versions/${versao.id}/answer-key`
     )
 
-    if (!resultado.data) {
+    if (!resultado) {
       throw new Error('O servidor não retornou os dados do gabarito.')
     }
 
     prova.value = {
-      nome: resultado.data.examTitle || 'Gabarito da prova'
+      nome: resultado.examTitle || 'Gabarito da prova'
     }
 
-    gabarito.value = resultado.data.questions ?? []
+    gabarito.value = resultado.questions ?? []
   } catch (error) {
-    console.error('Erro ao carregar gabarito:', error)
     erroGabarito.value =
       error.message || 'Não foi possível carregar o gabarito.'
   } finally {
