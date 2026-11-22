@@ -183,6 +183,11 @@ async function loadFilters() {
 }
 
 async function loadReport() {
+    if (filters.startDate && filters.endDate && filters.startDate > filters.endDate) {
+        errorMessage.value = 'A data inicial nao pode ser posterior a data final.';
+        return;
+    }
+
     loading.value = true;
     errorMessage.value = '';
 

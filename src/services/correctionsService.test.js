@@ -137,6 +137,7 @@ const createHarness = (overrides = {}) => {
         })),
         findCorrectionById: vi.fn().mockResolvedValue({
             id: 91,
+            applicationId: 9,
             studentId: 31,
             studentName: 'Ana Souza',
             studentRegistration: '20260042',
@@ -151,6 +152,8 @@ const createHarness = (overrides = {}) => {
         }),
         updateCorrection: vi.fn().mockResolvedValue(undefined),
         updateAssociation: vi.fn().mockResolvedValue(1),
+        findQrCorrectionConflict: vi.fn().mockResolvedValue(null),
+        refreshApplicationStatus: vi.fn().mockResolvedValue(undefined),
         ...overrides
     };
     const transaction = { name: 'transaction' };
@@ -216,6 +219,21 @@ describe('servico de correcao por QR Code', () => {
         }, transaction);
         expect(result).toMatchObject({ id: 91, totalScore: 1.25 });
         expect(transactionState).toEqual({ committed: true, rolledBack: false });
+        expect(repository.findQrCorrectionConflict).toHaveBeenCalledWith(12, 31, '20260042', transaction);
+        expect(repository.refreshApplicationStatus).toHaveBeenCalledWith(9, transaction);
+    });
+
+    it('rejeita com 409 quando ja existe correcao confirmada para o mesmo aluno nesta versao', async () => {
+        const { repository, service } = createHarness({
+            findQrCorrectionConflict: vi.fn().mockResolvedValue({ id: 5 })
+        });
+
+        await expect(service.correct(7, {
+            qrCodePayload: 'QR-ABC',
+            answers: [{ questionId: 101, selectedAlternativeId: 1001 }]
+        })).rejects.toMatchObject({ status: 409, code: 'CORRECTION_CONFLICT' });
+        expect(repository.insertQrCorrection).not.toHaveBeenCalled();
+        expect(repository.refreshApplicationStatus).not.toHaveBeenCalled();
     });
 
     it('nao revela contexto QR pertencente a outro professor', async () => {
@@ -330,6 +348,7 @@ describe('servico de correcao por QR Code', () => {
                 awardedScore: 0
             }]
         }, transaction);
+        expect(repository.refreshApplicationStatus).toHaveBeenCalledWith(9, transaction);
     });
 });
 
@@ -417,6 +436,16 @@ describe('servico da tela de correcoes', () => {
         );
         expect(result.id).toBe(88);
         expect(transactionState).toEqual({ committed: true, rolledBack: false });
+        expect(repository.refreshApplicationStatus).toHaveBeenCalledWith(9, transaction);
+    });
+
+    it('nao recalcula o status da aplicacao quando a correcao manual e salva como pendente', async () => {
+        const { repository, service } = createHarness();
+
+        await service.createCorrection(7, creationPayload({ status: 'pending' }));
+
+        expect(repository.insertCorrection).toHaveBeenCalledOnce();
+        expect(repository.refreshApplicationStatus).not.toHaveBeenCalled();
     });
 
     it('rejeita campos de autoridade e pontuacao enviados pelo cliente antes da transacao', async () => {

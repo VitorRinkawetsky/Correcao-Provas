@@ -1,5 +1,49 @@
 
 const reportsRepository = require('../repositories/reportsRepository');
+const { ApiError } = require('../http/ApiError');
+
+const DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+function positiveId(value, field) {
+    if (value === null || value === undefined) return null;
+    if (!/^\d+$/.test(String(value)) || !Number.isSafeInteger(Number(value)) || Number(value) < 1) {
+        throw new ApiError(400, 'VALIDATION_ERROR', 'Identificador invalido', [{ field }]);
+    }
+    return Number(value);
+}
+
+function validDate(value, field) {
+    if (value === null || value === undefined) return null;
+
+    const match = typeof value === 'string' ? DATE_PATTERN.exec(value) : null;
+    const [, year, month, day] = match || [];
+    const date = match ? new Date(`${year}-${month}-${day}T00:00:00Z`) : null;
+    const isValid = date
+        && !Number.isNaN(date.getTime())
+        && date.getUTCFullYear() === Number(year)
+        && date.getUTCMonth() + 1 === Number(month)
+        && date.getUTCDate() === Number(day);
+
+    if (!isValid) {
+        throw new ApiError(400, 'VALIDATION_ERROR', 'Data invalida, use o formato AAAA-MM-DD', [{ field }]);
+    }
+    return value;
+}
+
+function validateFilters(filters) {
+    const classId = positiveId(filters.classId, 'classId');
+    const applicationId = positiveId(filters.applicationId, 'applicationId');
+    const startDate = validDate(filters.startDate, 'startDate');
+    const endDate = validDate(filters.endDate, 'endDate');
+
+    if (startDate && endDate && startDate > endDate) {
+        throw new ApiError(400, 'VALIDATION_ERROR', 'A data inicial nao pode ser posterior a data final', [
+            { field: 'startDate' }
+        ]);
+    }
+
+    return { classId, applicationId, startDate, endDate };
+}
 
 function calculateMedian(values) {
     if (values.length === 0) return 0;
@@ -15,7 +59,7 @@ function calculateMedian(values) {
 }
 
 async function getReport(teacherId, filters = {}) {
-    const rows = await reportsRepository.getReportData(teacherId, filters);
+    const rows = await reportsRepository.getReportData(teacherId, validateFilters(filters));
     const scores = rows.map(row => Number(row.score));
 
     const total = scores.reduce((sum, score) => sum + score, 0);
@@ -71,9 +115,10 @@ async function getReport(teacherId, filters = {}) {
 }
 
 async function getReportFilters(teacherId, classId = null) {
+    const validClassId = positiveId(classId, 'classId');
     const [classes, applications] = await Promise.all([
         reportsRepository.listReportClasses(teacherId),
-        reportsRepository.listReportApplications(teacherId, classId)
+        reportsRepository.listReportApplications(teacherId, validClassId)
     ]);
 
     return { classes, applications };
@@ -81,5 +126,6 @@ async function getReportFilters(teacherId, classId = null) {
 
 module.exports = {
     getReport,
-    getReportFilters
+    getReportFilters,
+    validateFilters
 };
