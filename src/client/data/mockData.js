@@ -467,8 +467,9 @@ export const corrections = [
 export const statusLabels = {
     ready: 'Pronta',
     draft: 'Rascunho',
-    closed: 'Encerrada',
+    closed: 'Concluída',
     generated: 'PDF gerado',
+    in_correction: 'Em correção',
     active: 'Ativa',
     archived: 'Arquivada',
     synced: 'Sincronizada',
@@ -482,6 +483,7 @@ export const statusTones = {
     active: 'success',
     synced: 'success',
     draft: 'neutral',
+    in_correction: 'warning',
     pending: 'warning',
     error: 'danger',
     closed: 'muted',

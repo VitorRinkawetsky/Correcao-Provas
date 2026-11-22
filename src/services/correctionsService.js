@@ -2,7 +2,32 @@ const { pool } = require('../config/database');
 const repository = require('../repositories/correctionsRepository');
 const { ApiError } = require('../http/ApiError');
 
+const MAX_STUDENT_NAME = 150;
+const MAX_STUDENT_REGISTRATION = 40;
+const MAX_NOTES = 4000;
+
 const normalizeCode = (value) => String(value || '').trim();
+
+const validateReportedFields = (studentName, studentRegistration, notes) => {
+    const details = [];
+    if (studentName.length > MAX_STUDENT_NAME) {
+        details.push({ field: 'studentName', message: `O nome deve ter ate ${MAX_STUDENT_NAME} caracteres` });
+    }
+    if (studentRegistration.length > MAX_STUDENT_REGISTRATION) {
+        details.push({
+            field: 'studentRegistration',
+            message: `A matricula deve ter ate ${MAX_STUDENT_REGISTRATION} caracteres`
+        });
+    }
+    if (notes !== undefined && notes !== null && typeof notes !== 'string') {
+        details.push({ field: 'notes', message: 'As observacoes devem ser um texto' });
+    } else if (typeof notes === 'string' && notes.length > MAX_NOTES) {
+        details.push({ field: 'notes', message: `As observacoes devem ter ate ${MAX_NOTES} caracteres` });
+    }
+    if (details.length > 0) {
+        throw new ApiError(400, 'VALIDATION_ERROR', 'Dados invalidos para a correcao', details);
+    }
+};
 
 const positiveId = (value) => {
     const id = Number(value);
@@ -46,20 +71,21 @@ const correct = async (teacherId, body) => {
         );
     }
 
+    validateReportedFields(studentName, studentRegistration, body?.notes);
+
     const answersByQuestion = new Map(
         answers.map((answer) => [Number(answer?.questionId), answer])
     );
     const details = [];
     const normalizedAnswers = context.questions.map((question) => {
         const answer = answersByQuestion.get(Number(question.questionId));
-        const selectedAlternativeId = answer?.selectedAlternativeId
-            ? Number(answer.selectedAlternativeId)
+        const hasSelection = answer?.selectedAlternativeId !== undefined && answer?.selectedAlternativeId !== null;
+        const selectedAlternativeId = hasSelection ? Number(answer.selectedAlternativeId) : null;
+        const selectedAlternative = hasSelection
+            ? question.alternatives.find((alternative) => Number(alternative.id) === selectedAlternativeId)
             : null;
-        const selectedAlternative = question.alternatives.find(
-            (alternative) => Number(alternative.id) === selectedAlternativeId
-        );
 
-        if (answer && selectedAlternativeId && !selectedAlternative) {
+        if (hasSelection && (!Number.isInteger(selectedAlternativeId) || !selectedAlternative)) {
             details.push({
                 field: `answers.${question.questionId}`,
                 message: 'Alternativa invalida para a questao'
@@ -76,6 +102,19 @@ const correct = async (teacherId, body) => {
 
     if (details.length > 0) {
         throw new ApiError(400, 'VALIDATION_ERROR', 'Respostas invalidas', details);
+    }
+
+    const duplicate = await repository.findConfirmedDuplicate(
+        context.examVersionId,
+        context.assignedStudentId || null,
+        studentRegistration || null
+    );
+    if (duplicate) {
+        throw new ApiError(
+            409,
+            'DUPLICATE_CORRECTION',
+            'Esta prova ja foi corrigida para este aluno'
+        );
     }
 
     const connection = await pool.getConnection();
@@ -124,6 +163,8 @@ const correct = async (teacherId, body) => {
             teacherId
         }, connection);
 
+        await repository.refreshApplicationStatus(context.applicationId, connection);
+
         await connection.commit();
         return {
             id: correctionId,
@@ -169,14 +210,13 @@ const update = async (id, teacherId, body) => {
 
     const normalizedAnswers = current.questions.map((question) => {
         const answer = answerByQuestion.get(Number(question.questionId));
-        const selectedAlternativeId = answer?.selectedAlternativeId
-            ? Number(answer.selectedAlternativeId)
+        const hasSelection = answer?.selectedAlternativeId !== undefined && answer?.selectedAlternativeId !== null;
+        const selectedAlternativeId = hasSelection ? Number(answer.selectedAlternativeId) : null;
+        const selectedAlternative = hasSelection
+            ? question.alternatives.find((alternative) => Number(alternative.id) === selectedAlternativeId)
             : null;
-        const selectedAlternative = question.alternatives.find(
-            (alternative) => Number(alternative.id) === selectedAlternativeId
-        );
 
-        if (answer && selectedAlternativeId && !selectedAlternative) {
+        if (hasSelection && (!Number.isInteger(selectedAlternativeId) || !selectedAlternative)) {
             details.push({
                 field: `answers.${question.questionId}`,
                 message: 'A alternativa nao pertence a versao recebida'
@@ -196,7 +236,7 @@ const update = async (id, teacherId, body) => {
             (question) => Number(question.questionId) === questionId
         )
     );
-    if (unknownQuestion) {
+    if (unknownQuestion !== undefined) {
         details.push({
             field: 'answers',
             message: 'A resposta referencia uma questao que nao pertence a versao'
@@ -222,6 +262,8 @@ const update = async (id, teacherId, body) => {
         throw new ApiError(400, 'VALIDATION_ERROR', 'Informe a matricula do aluno');
     }
 
+    validateReportedFields(studentName, studentRegistration, body?.notes);
+
     const connection = await pool.getConnection();
     try {
         await connection.beginTransaction();
@@ -233,6 +275,7 @@ const update = async (id, teacherId, body) => {
             notes: body?.notes,
             answers: normalizedAnswers
         }, connection);
+        await repository.refreshApplicationStatus(current.applicationId, connection);
         await connection.commit();
     } catch (error) {
         await connection.rollback();

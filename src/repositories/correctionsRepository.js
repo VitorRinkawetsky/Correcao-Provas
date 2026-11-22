@@ -30,9 +30,10 @@ const findCorrectionContext = async (code, teacherId, db = pool) => {
             AND (
                 version.qr_code_payload = ?
                 OR assignment.qr_code_payload = ?
+                OR version.public_code = ?
             )
         LIMIT 1
-    `, [code, teacherId, code, code]);
+    `, [code, teacherId, code, code, code]);
 
     if (!rows[0]) return null;
 
@@ -88,6 +89,22 @@ const findCorrectionContext = async (code, teacherId, db = pool) => {
         ...rows[0],
         questions: [...questionsById.values()]
     };
+};
+
+const findConfirmedDuplicate = async (examVersionId, studentId, studentRegistration, db = pool) => {
+    const [rows] = await db.execute(`
+        SELECT id
+        FROM corrections
+        WHERE exam_version_id = ?
+            AND status = 'confirmed'
+            AND (
+                (? IS NOT NULL AND student_id = ?)
+                OR (? IS NOT NULL AND reported_student_registration = ?)
+            )
+        LIMIT 1
+    `, [examVersionId, studentId, studentId, studentRegistration, studentRegistration]);
+
+    return rows[0] || null;
 };
 
 const insertCorrection = async (data, db = pool) => {
@@ -155,6 +172,7 @@ const findCorrectionById = async (id, teacherId, db = pool) => {
             version.version_number AS versionNumber,
             version.public_code AS publicCode,
             version.qr_code_payload AS qrCodePayload,
+            application.id AS applicationId,
             exam.title AS examTitle,
             classroom.name AS className
         FROM corrections AS correction
@@ -244,6 +262,58 @@ const findCorrectionById = async (id, teacherId, db = pool) => {
     };
 };
 
+// Recalcula applications.status a partir das correcoes confirmadas: 'in_correction' com
+// a primeira confirmada, 'closed' quando todos os alunos ativos da turma ja tem correcao
+// (identificado por student_id quando ha identificacao, por matricula quando nao ha).
+// Quando a aplicacao fecha, fecha a prova tambem se todas as suas aplicacoes ja fecharam.
+const refreshApplicationStatus = async (applicationId, db = pool) => {
+    const [applicationRows] = await db.execute(
+        'SELECT class_id AS classId, exam_id AS examId, status FROM applications WHERE id = ?',
+        [applicationId]
+    );
+    const application = applicationRows[0];
+    if (!application) return;
+
+    const [activeRows] = await db.execute(
+        "SELECT COUNT(*) AS count FROM class_students WHERE class_id = ? AND status = 'active'",
+        [application.classId]
+    );
+    const [correctedRows] = await db.execute(`
+        SELECT COUNT(DISTINCT COALESCE(c.student_id, c.reported_student_registration)) AS count
+        FROM corrections c
+        INNER JOIN exam_versions ev ON ev.id = c.exam_version_id
+        WHERE ev.application_id = ? AND c.status = 'confirmed'
+    `, [applicationId]);
+
+    const activeCount = Number(activeRows[0].count);
+    const correctedCount = Number(correctedRows[0].count);
+
+    let nextStatus = null;
+    if (activeCount > 0 && correctedCount >= activeCount) {
+        nextStatus = 'closed';
+    } else if (correctedCount > 0) {
+        nextStatus = 'in_correction';
+    }
+
+    if (!nextStatus || nextStatus === application.status) return;
+
+    await db.execute('UPDATE applications SET status = ? WHERE id = ?', [nextStatus, applicationId]);
+
+    if (nextStatus === 'closed') {
+        const [examRows] = await db.execute(`
+            SELECT COUNT(*) AS total, SUM(status = 'closed') AS closedCount
+            FROM applications WHERE exam_id = ?
+        `, [application.examId]);
+
+        if (Number(examRows[0].total) === Number(examRows[0].closedCount)) {
+            await db.execute(
+                "UPDATE exams SET status = 'closed' WHERE id = ? AND status NOT IN ('closed', 'archived')",
+                [application.examId]
+            );
+        }
+    }
+};
+
 const updateCorrection = async (id, data, db = pool) => {
     await db.execute(`
         UPDATE corrections
@@ -291,7 +361,9 @@ const updateCorrection = async (id, data, db = pool) => {
 
 module.exports = {
     findCorrectionContext,
+    findConfirmedDuplicate,
     insertCorrection,
     findCorrectionById,
-    updateCorrection
+    updateCorrection,
+    refreshApplicationStatus
 };

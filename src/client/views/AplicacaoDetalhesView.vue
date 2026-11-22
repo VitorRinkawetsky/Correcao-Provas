@@ -94,7 +94,7 @@ function abrirResultados() {
         <p><strong>Prova:</strong> {{ aplicacao.examTitle }}</p>
         <p><strong>Turma:</strong> {{ aplicacao.className }}</p>
         <p><strong>ID:</strong> {{ aplicacao.id }}</p>
-        <p><strong>Status:</strong> {{ aplicacao.status }}</p>
+        <p><strong>Status:</strong> <StatusBadge :status="aplicacao.status" /></p>
       </section>
 
       <section class="acoes-aplicacao">
