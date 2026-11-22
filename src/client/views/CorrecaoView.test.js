@@ -5,17 +5,29 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const {
     createCorrection,
+    clearCanvas,
+    detectQrCode,
+    drawRecognitionPreview,
     getCorrection,
     getCorrectionContext,
+    loadImageFile,
     push,
+    recognizeAnswerSheet,
     route,
+    sourceToImageData,
     updateCorrection
 } = vi.hoisted(() => ({
     createCorrection: vi.fn(),
+    clearCanvas: vi.fn(),
+    detectQrCode: vi.fn(),
+    drawRecognitionPreview: vi.fn(),
     getCorrection: vi.fn(),
     getCorrectionContext: vi.fn(),
+    loadImageFile: vi.fn(),
     push: vi.fn(),
+    recognizeAnswerSheet: vi.fn(),
     route: { params: { id: '9' } },
+    sourceToImageData: vi.fn(),
     updateCorrection: vi.fn()
 }));
 
@@ -29,6 +41,18 @@ vi.mock('../services/correctionApi', () => ({
     getCorrection,
     getCorrectionContext,
     updateCorrection
+}));
+
+vi.mock('../services/answerSheetCapture', () => ({
+    clearCanvas,
+    detectQrCode,
+    drawRecognitionPreview,
+    loadImageFile,
+    sourceToImageData
+}));
+
+vi.mock('../services/answerSheetReader', () => ({
+    recognizeAnswerSheet
 }));
 
 import CorrecaoView from './CorrecaoView.vue';
@@ -81,6 +105,24 @@ beforeEach(() => {
     });
     createCorrection.mockResolvedValue({ id: 91, totalScore: 1.25 });
     updateCorrection.mockResolvedValue({ id: 91, totalScore: 0 });
+    detectQrCode.mockResolvedValue('QR-ABC');
+    const bitmap = { width: 1000, height: 1414, close: vi.fn() };
+    loadImageFile.mockResolvedValue(bitmap);
+    sourceToImageData.mockReturnValue({
+        data: new Uint8ClampedArray(4),
+        width: 1,
+        height: 1
+    });
+    recognizeAnswerSheet.mockReturnValue({
+        alignedImageData: { data: new Uint8ClampedArray(4), width: 1, height: 1 },
+        geometry: { rows: [] },
+        questions: [{
+            questionId: 101,
+            status: 'marked',
+            selectedIndex: 1,
+            ratios: [0.05, 0.82]
+        }]
+    });
 });
 
 describe('correcao por QR Code', () => {
@@ -150,5 +192,36 @@ describe('correcao por QR Code', () => {
             name: 'application-details',
             params: { id: 9 }
         });
+    });
+
+    it('le a foto, preenche o id da alternativa impressa e salva pelo fluxo atual', async () => {
+        const wrapper = mount(CorrecaoView);
+        const fileInput = wrapper.get('input[type="file"]');
+        const file = new File(['foto'], 'cartao.jpg', { type: 'image/jpeg' });
+        Object.defineProperty(fileInput.element, 'files', {
+            configurable: true,
+            value: [file]
+        });
+
+        await fileInput.trigger('change');
+        await flushPromises();
+
+        expect(detectQrCode).toHaveBeenCalled();
+        expect(getCorrectionContext).toHaveBeenCalledWith('QR-ABC');
+        expect(recognizeAnswerSheet).toHaveBeenCalledWith(
+            expect.any(Object),
+            expect.arrayContaining([expect.objectContaining({ questionId: 101 })])
+        );
+        expect(wrapper.get('input[value="1002"]').element.checked).toBe(true);
+        expect(wrapper.text()).toContain('1 resposta lida');
+
+        await wrapper.get('.correcao-form').trigger('submit');
+        await flushPromises();
+
+        expect(createCorrection).toHaveBeenCalledWith(expect.objectContaining({
+            qrCodePayload: 'QR-ABC',
+            answers: [{ questionId: 101, selectedAlternativeId: 1002 }]
+        }));
+        expect(wrapper.text()).toContain('Nota: 1.25');
     });
 });
