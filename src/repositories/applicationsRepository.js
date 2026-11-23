@@ -3,9 +3,10 @@ const { pool } = require('../config/database');
 
 async function findOwnedExam(examId, teacherId, db = pool) {
   const [rows] = await db.execute(
-    `SELECT id, title, status
-     FROM exams
-     WHERE id = ? AND teacher_id = ?
+    `SELECT e.id, e.title, e.status,
+            (SELECT COUNT(*) FROM exam_questions WHERE exam_id = e.id) AS questionCount
+     FROM exams e
+     WHERE e.id = ? AND e.teacher_id = ?
      FOR UPDATE`,
     [examId, teacherId]
   );
@@ -30,6 +31,15 @@ async function findOwnedClass(classId, teacherId, db = pool) {
   );
 
   return rows[0] ?? null;
+}
+
+async function countActiveStudents(classId, db = pool) {
+  const [rows] = await db.execute(
+    `SELECT COUNT(*) AS count FROM class_students WHERE class_id = ? AND status = 'active'`,
+    [classId]
+  );
+
+  return Number(rows[0].count);
 }
 
 async function insertApplication({ examId, classId, teacherId }, db = pool) {
@@ -87,6 +97,7 @@ module.exports = {
   findOwnedExam,
   markExamReady,
   findOwnedClass,
+  countActiveStudents,
   insertApplication,
   findApplication,
   listApplications,

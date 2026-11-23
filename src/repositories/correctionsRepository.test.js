@@ -187,4 +187,105 @@ describe('repositorio de correcoes sem aluno', () => {
         expect(sql).not.toContain('reported_student_registration =');
         expect(params).toEqual([31, 55, 17]);
     });
+
+    it('busca o contexto do QR tambem pelo public_code digitado manualmente', async () => {
+        const execute = vi.fn().mockResolvedValue([[]]);
+
+        await repository.findCorrectionContext('ABC-123', 7, { execute });
+
+        const [sql, params] = execute.mock.calls[0];
+        expect(sql).toContain('version.public_code = ?');
+        expect(params).toEqual(['ABC-123', 7, 'ABC-123', 'ABC-123', 'ABC-123']);
+    });
+
+    it('detecta conflito de correcao do QR por student_id ou por matricula reportada', async () => {
+        const execute = vi.fn().mockResolvedValue([[{ id: 5 }]]);
+
+        const result = await repository.findQrCorrectionConflict(12, null, 'RA-001', { execute });
+
+        expect(result).toEqual({ id: 5 });
+        const [sql, params] = execute.mock.calls[0];
+        expect(sql).toContain("status = 'confirmed'");
+        expect(sql).toContain('student_id = ?');
+        expect(sql).toContain('reported_student_registration = ?');
+        expect(sql.trim()).toMatch(/FOR UPDATE$/);
+        expect(params).toEqual([12, null, null, 'RA-001', 'RA-001']);
+    });
+});
+
+describe('refreshApplicationStatus', () => {
+    it('nao faz nada quando a aplicacao nao existe', async () => {
+        const execute = vi.fn().mockResolvedValueOnce([[]]);
+
+        await repository.refreshApplicationStatus(999, { execute });
+
+        expect(execute).toHaveBeenCalledTimes(1);
+    });
+
+    it('fica "in_correction" quando ha correcao confirmada mas ainda falta gente', async () => {
+        const execute = vi.fn()
+            .mockResolvedValueOnce([[{ classId: 4, examId: 9, status: 'draft' }]])
+            .mockResolvedValueOnce([[{ count: 2 }]])
+            .mockResolvedValueOnce([[{ count: 1 }]])
+            .mockResolvedValueOnce([{ affectedRows: 1 }]);
+
+        await repository.refreshApplicationStatus(1, { execute });
+
+        expect(execute).toHaveBeenCalledTimes(4);
+        expect(execute.mock.calls[3][0]).toContain('UPDATE applications SET status = ?');
+        expect(execute.mock.calls[3][1]).toEqual(['in_correction', 1]);
+    });
+
+    it('fica "closed" quando todos os alunos ativos ja tem correcao, e fecha a prova se for a unica aplicacao', async () => {
+        const execute = vi.fn()
+            .mockResolvedValueOnce([[{ classId: 4, examId: 9, status: 'in_correction' }]])
+            .mockResolvedValueOnce([[{ count: 2 }]])
+            .mockResolvedValueOnce([[{ count: 2 }]])
+            .mockResolvedValueOnce([{ affectedRows: 1 }])
+            .mockResolvedValueOnce([[{ total: 1, closedCount: 1 }]])
+            .mockResolvedValueOnce([{ affectedRows: 1 }]);
+
+        await repository.refreshApplicationStatus(1, { execute });
+
+        expect(execute).toHaveBeenCalledTimes(6);
+        expect(execute.mock.calls[3][1]).toEqual(['closed', 1]);
+        expect(execute.mock.calls[5][0]).toContain("UPDATE exams SET status = 'closed'");
+        expect(execute.mock.calls[5][1]).toEqual([9]);
+    });
+
+    it('nao fecha a prova se outra aplicacao da mesma prova ainda nao fechou', async () => {
+        const execute = vi.fn()
+            .mockResolvedValueOnce([[{ classId: 4, examId: 9, status: 'in_correction' }]])
+            .mockResolvedValueOnce([[{ count: 2 }]])
+            .mockResolvedValueOnce([[{ count: 2 }]])
+            .mockResolvedValueOnce([{ affectedRows: 1 }])
+            .mockResolvedValueOnce([[{ total: 2, closedCount: 1 }]]);
+
+        await repository.refreshApplicationStatus(1, { execute });
+
+        expect(execute).toHaveBeenCalledTimes(5);
+    });
+
+    it('nao escreve nada quando o status recalculado e igual ao atual', async () => {
+        const execute = vi.fn()
+            .mockResolvedValueOnce([[{ classId: 4, examId: 9, status: 'closed' }]])
+            .mockResolvedValueOnce([[{ count: 2 }]])
+            .mockResolvedValueOnce([[{ count: 2 }]]);
+
+        await repository.refreshApplicationStatus(1, { execute });
+
+        expect(execute).toHaveBeenCalledTimes(3);
+    });
+
+    it('volta para "in_correction" quando uma correcao confirmada e apagada (recalculo sempre a partir do estado atual)', async () => {
+        const execute = vi.fn()
+            .mockResolvedValueOnce([[{ classId: 4, examId: 9, status: 'closed' }]])
+            .mockResolvedValueOnce([[{ count: 2 }]])
+            .mockResolvedValueOnce([[{ count: 1 }]])
+            .mockResolvedValueOnce([{ affectedRows: 1 }]);
+
+        await repository.refreshApplicationStatus(1, { execute });
+
+        expect(execute.mock.calls[3][1]).toEqual(['in_correction', 1]);
+    });
 });
