@@ -1,9 +1,10 @@
 
 <script setup>
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onBeforeUnmount, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import QRCode from 'qrcode'
 
+import AnswerSheetPrint from '../components/AnswerSheetPrint.vue'
 import { reportUnauthorized } from '../services/apiClient'
 
 const route = useRoute()
@@ -21,6 +22,11 @@ const erroGabarito = ref('')
 const atribuicoes = ref([])
 const imagensQr = ref({})
 const copiado = ref('')
+const cartaoSelecionado = ref(null)
+const perguntasCartao = ref([])
+const carregandoCartao = ref(false)
+const erroCartao = ref('')
+const alvoImpressao = ref('')
 
 // Com identificação, cada aluno tem um QR Code; sem identificação, o QR é da versão.
 const codigosCorrecao = computed(() => {
@@ -29,7 +35,10 @@ const codigosCorrecao = computed(() => {
       chave: `aluno-${atribuicao.id}`,
       titulo: atribuicao.studentName,
       detalhe: `Matrícula ${atribuicao.registration} · Versão ${atribuicao.versionNumber}`,
-      codigo: atribuicao.qrCodePayload
+      codigo: atribuicao.qrCodePayload,
+      versionId: atribuicao.versionId,
+      versionNumber: atribuicao.versionNumber,
+      identity: `${atribuicao.studentName} · Matrícula ${atribuicao.registration}`
     }))
   }
 
@@ -37,7 +46,10 @@ const codigosCorrecao = computed(() => {
     chave: `versao-${versao.id}`,
     titulo: `Versão ${versao.versionNumber}`,
     detalhe: 'Prova sem identificação do aluno',
-    codigo: versao.qrCodePayload
+    codigo: versao.qrCodePayload,
+    versionId: versao.id,
+    versionNumber: versao.versionNumber,
+    identity: 'Prova sem identificação do aluno'
   }))
 })
 
@@ -147,7 +159,51 @@ async function abrirGabarito(versao) {
 }
 
 function baixarPdf() {
+  alvoImpressao.value = 'gabarito'
+  document.body.classList.add('answer-key-printing')
+  window.addEventListener('afterprint', limparModoImpressao, { once: true })
   window.print()
+}
+
+async function abrirCartao(item) {
+  carregandoCartao.value = true
+  erroCartao.value = ''
+  cartaoSelecionado.value = null
+  perguntasCartao.value = []
+
+  try {
+    const resultado = await requisicaoJson(
+      `/api/application-versions/${item.versionId}/answer-key`
+    )
+    const questions = resultado.data?.questions
+    if (!Array.isArray(questions) || questions.length === 0) {
+      throw new Error('A versão não possui questões para o cartão-resposta.')
+    }
+    perguntasCartao.value = questions.map((question) => ({
+      order: Number(question.order),
+      alternativeCount: Number(question.alternativeCount)
+    }))
+    cartaoSelecionado.value = {
+      ...item,
+      examTitle: resultado.data.examTitle || 'Cartão-resposta'
+    }
+  } catch (error) {
+    erroCartao.value = error.message || 'Não foi possível montar o cartão-resposta.'
+  } finally {
+    carregandoCartao.value = false
+  }
+}
+
+async function imprimirCartao() {
+  alvoImpressao.value = 'cartao'
+  document.body.classList.add('answer-sheet-printing')
+  window.addEventListener('afterprint', limparModoImpressao, { once: true })
+  await nextTick()
+  window.print()
+}
+
+function limparModoImpressao() {
+  document.body.classList.remove('answer-sheet-printing', 'answer-key-printing')
 }
 
 function voltarDetalhes() {
@@ -158,10 +214,14 @@ function voltarDetalhes() {
 }
 
 onMounted(carregarVersoes)
+onBeforeUnmount(limparModoImpressao)
 </script>
 
 <template>
-  <section class="pagina">
+  <section
+    class="pagina"
+    :class="`imprimir-${alvoImpressao || 'nenhum'}`"
+  >
     <button
       type="button"
       class="voltar"
@@ -253,9 +313,41 @@ onMounted(carregarVersoes)
             >
               {{ copiado === item.chave ? 'Código copiado' : 'Copiar código' }}
             </button>
+            <button
+              type="button"
+              class="botao botao--secundario"
+              :disabled="carregandoCartao"
+              @click="abrirCartao(item)"
+            >
+              Cartão-resposta
+            </button>
           </div>
         </article>
       </div>
+    </section>
+
+    <p v-if="erroCartao" class="erro" role="alert">
+      {{ erroCartao }}
+    </p>
+
+    <section
+      v-if="cartaoSelecionado"
+      class="cartao-impressao"
+      aria-labelledby="cartao-titulo"
+    >
+      <div class="cartao-impressao__acoes">
+        <h2 id="cartao-titulo">Cartão-resposta pronto para imprimir</h2>
+        <button type="button" class="botao" @click="imprimirCartao">
+          Imprimir / salvar PDF
+        </button>
+      </div>
+      <AnswerSheetPrint
+        :qr-data-url="imagensQr[cartaoSelecionado.chave]"
+        :exam-title="cartaoSelecionado.examTitle"
+        :identity="cartaoSelecionado.identity"
+        :version-label="`Versão ${cartaoSelecionado.versionNumber}`"
+        :questions="perguntasCartao"
+      />
     </section>
 
     <section
@@ -413,6 +505,20 @@ h1 {
   border: 1px solid var(--color-primary, #0f5e56);
   background: transparent;
   color: var(--color-primary, #0f5e56);
+  margin-right: 8px;
+}
+
+.cartao-impressao {
+  margin-top: 28px;
+  max-width: 900px;
+}
+
+.cartao-impressao__acoes {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
 }
 
 .erro {
@@ -433,17 +539,31 @@ h1 {
 }
 
 @media print {
-  .voltar,
-  .lista-versoes,
-  .gabarito button {
+  .pagina.imprimir-cartao > :not(.cartao-impressao),
+  .pagina.imprimir-cartao .cartao-impressao__acoes {
     display: none !important;
   }
 
-  .pagina {
+  .pagina.imprimir-cartao,
+  .pagina.imprimir-gabarito {
     padding: 0;
   }
 
-  .gabarito {
+  .pagina.imprimir-cartao .cartao-impressao {
+    max-width: none;
+    margin: 0;
+  }
+
+  .pagina.imprimir-gabarito .voltar,
+  .pagina.imprimir-gabarito .lista-versoes,
+  .pagina.imprimir-gabarito .codigos,
+  .pagina.imprimir-gabarito .cartao-impressao,
+  .pagina.imprimir-gabarito > h1,
+  .pagina.imprimir-gabarito .gabarito button {
+    display: none !important;
+  }
+
+  .pagina.imprimir-gabarito .gabarito {
     max-width: none;
     border: 0;
   }
