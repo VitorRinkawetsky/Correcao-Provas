@@ -90,7 +90,7 @@ Os requisitos abaixo representam a visão do produto. A coluna **Situação atua
 | RF08 | Corrigir provas pelo QR Code (câmera ou código) e lançar respostas manualmente. | Integrado ao MySQL |
 | RF09 | Calcular notas e disponibilizar relatórios e estatísticas da avaliação, com exportação CSV. | Integrado ao MySQL |
 | RF10 | Autenticar professores e restringir os dados ao professor responsável. | Integrado ao MySQL |
-| RF11 | Ler o cartão-resposta preenchido por imagem (visão computacional). | Planejado para a N3 |
+| RF11 | Ler o cartão-resposta preenchido por imagem (visão computacional). | Implementado no navegador; calibração com fotos reais pendente |
 
 ### 2.2 Requisitos Não Funcionais
 
@@ -155,13 +155,17 @@ Exibe as aplicações cadastradas (prova aplicada a uma turma) e seus estados.
 
 ### 4.8 Versões e QR Codes
 
-Mostra as versões geradas com embaralhamento de questões e alternativas, o gabarito de cada versão e os QR Codes de correção; com identificação, cada aluno recebe a sua versão e o seu QR Code.
+Mostra as versões geradas com embaralhamento de questões e alternativas, o gabarito de cada versão e os QR Codes de correção; com identificação, cada aluno recebe a sua versão e o seu QR Code. O botão **Cartão-resposta** monta uma página A4 com QR, quatro marcadores de alinhamento e a grade de alternativas da versão.
 
 ![Versões da prova e QR Codes](docs/telas/versoes-qr.png)
 
 ### 4.9 Correção
 
-Ao ler o QR Code (ou colar o código), a prova da versão é exibida com o aluno identificado. A nota é calculada no servidor e a correção pode ser revisada depois.
+O professor pode abrir a câmera traseira e tocar em **Capturar cartão** ou usar **Enviar foto**. O navegador lê o QR, corrige a perspectiva pelos quatro marcadores e preenche as alternativas automaticamente. A imagem alinhada destaca leituras seguras em verde e rasuras/dúvidas em amarelo; qualquer resposta pode ser corrigida antes de salvar.
+
+A foto é processada somente em memória no aparelho: não é enviada à API, gravada no banco, colocada em `localStorage` ou registrada em logs. O servidor recebe apenas QR, identificação e IDs das respostas, calcula a nota e a devolve para destaque na tela.
+
+O caminho anterior permanece disponível: se a câmera, o `BarcodeDetector` ou a leitura automática falhar, informe o código do QR e marque/revise as respostas manualmente. Câmera no Android exige HTTPS; o endereço publicado no Render já atende esse requisito.
 
 ![Correção da prova](docs/telas/correcao.png)
 
@@ -498,10 +502,17 @@ primeiro acesso deve ser feito pelo cadastro de uma nova conta de professor.
 Alunos permanecem somente como registros das turmas e não podem autenticar.
 
 Na tela de detalhes de uma aplicação, **Corrigir por QR Code** mantém o fluxo de
-leitura pela câmera (com entrada manual do código como alternativa), enquanto
+leitura automática do cartão pela câmera ou por upload (com entrada manual do
+código e das respostas como alternativa), enquanto
 **Histórico de correções** e **Correções sem aluno** abrem os fluxos de consulta
 e associação manual. A API reserva `POST /api/corrections` para o QR Code e usa
 `POST /api/corrections/manual` para o lançamento manual.
+
+O contrato físico do cartão fica centralizado em
+`src/shared/answerSheetLayout.js`: página normalizada de 1000 × 1414 px,
+quatro marcadores, até 20 questões e de duas a cinco alternativas. O gerador
+imprimível e o leitor importam esse mesmo arquivo; não duplique essas medidas
+em um futuro gerador de PDF.
 
 Se o volume MySQL já existia antes da autenticação, aplique uma vez a migração
 aditiva, sem apagar os dados:
@@ -534,6 +545,19 @@ essas suítes:
 ```bash
 npm run test:mysql
 ```
+
+Os testes do leitor não dependem de banco e podem ser executados isoladamente:
+
+```bash
+npx vitest run src/client/services/answerSheetReader.test.js src/client/services/answerSheetCapture.test.js src/client/components/AnswerSheetPrint.test.js src/client/views/CorrecaoView.test.js src/client/views/AplicacaoVersoesView.test.js src/services/applicationVersionsService.test.js
+```
+
+Esses testes usam cartões sintéticos determinísticos de 5 e 20 questões. Antes
+da apresentação da N3, ainda é obrigatório calibrar os limiares no site publicado
+com pelo menos 15 fotos de cartões realmente impressos e preenchidos a caneta,
+incluindo boa luz, sombra, inclinação, rasura e questão em branco. A meta é erro
+abaixo de 1% em condições normais; essa validação não é substituída pelos
+testes locais.
 
 ### Build e execução de produção
 
