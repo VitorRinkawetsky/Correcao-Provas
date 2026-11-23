@@ -116,6 +116,8 @@ onMounted(async () => {
     }
 });
 
+const hasApplications = computed(() => Boolean(existingExam.value?.hasApplications));
+
 const handleSubmit = async () => {
     if (!title.value.trim()) {
         titleError.value = true;
@@ -125,6 +127,16 @@ const handleSubmit = async () => {
         submitError.value = 'A prova pode possuir no maximo 20 questoes.';
         return;
     }
+
+    // Prova com aplicações: as versões geradas serão apagadas, então o professor confirma antes.
+    if (isEditMode.value && hasApplications.value) {
+        const confirmed = window.confirm(
+            'Esta prova já tem aplicações. Ao salvar, as versões e os QR Codes gerados serão '
+            + 'apagados e as versões serão geradas novamente. Deseja continuar?'
+        );
+        if (!confirmed) return;
+    }
+
     titleError.value = false;
     submitError.value = '';
     saving.value = true;
@@ -141,7 +153,14 @@ const handleSubmit = async () => {
 
     try {
         const savedExam = isEditMode.value ? await updateExam(examId.value, payload) : await createExam(payload);
-        router.push(`/provas/${savedExam.id}`);
+        const resetIds = savedExam.resetApplicationIds ?? [];
+
+        if (resetIds.length > 0) {
+            // Leva o professor para a aplicação, onde as versões são geradas de novo.
+            await router.push({ name: 'application-details', params: { id: resetIds[0] } });
+        } else {
+            await router.push(`/provas/${savedExam.id}`);
+        }
     } catch (error) {
         submitError.value = error.message;
     } finally {
@@ -168,7 +187,14 @@ const cancelHref = computed(() => (isEditMode.value ? `/provas/${examId.value}` 
 
         <p v-if="loading" class="empty-state">Carregando dados da prova...</p>
         <p v-else-if="loadError" class="empty-state">{{ loadError }}</p>
-
+        <p
+            v-if="!loading && !loadError && isEditMode && hasApplications"
+            class="form-notice"
+            role="status"
+        >
+            Esta prova já tem aplicações. Ao salvar, as versões geradas serão apagadas
+            e você precisará gerá-las novamente.
+        </p>
         <form v-else class="exam-form" novalidate @submit.prevent="handleSubmit">
             <div class="form-field">
                 <label class="form-label" for="exam-title">Título</label>

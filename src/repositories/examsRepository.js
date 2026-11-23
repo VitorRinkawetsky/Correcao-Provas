@@ -138,6 +138,49 @@ const listOwnedQuestionIds = async (teacherId, questionIds, db) => {
     return rows.map((row) => Number(row.id));
 };
 
+// Há correção CONFIRMADA em alguma aplicação desta prova?
+async function hasConfirmedCorrections(examId, db = pool) {
+    const [rows] = await db.execute(
+        `SELECT 1
+         FROM corrections c
+         INNER JOIN exam_versions ev ON ev.id = c.exam_version_id
+         INNER JOIN applications a ON a.id = ev.application_id
+         WHERE a.exam_id = ? AND c.status = 'confirmed'
+         LIMIT 1`,
+        [examId]
+    );
+
+    return rows.length > 0;
+}
+
+// Trava as aplicações do professor para esta prova (impede que outra
+// requisição gere versões ou confirme correção no meio da edição).
+async function lockApplicationsByExam(examId, teacherId, db = pool) {
+    const [rows] = await db.execute(
+        `SELECT id, status
+         FROM applications
+         WHERE exam_id = ? AND teacher_id = ?
+         FOR UPDATE`,
+        [examId, teacherId]
+    );
+
+    return rows;
+}
+
+// Apaga versões e atribuições (por cascata) e volta as aplicações para 'draft'.
+async function resetVersionsForApplications(applicationIds, db = pool) {
+    if (applicationIds.length === 0) return;
+
+    await db.query(
+        'DELETE FROM exam_versions WHERE application_id IN (?)',
+        [applicationIds]
+    );
+    await db.query(
+        `UPDATE applications SET status = 'draft' WHERE id IN (?)`,
+        [applicationIds]
+    );
+}
+
 module.exports = {
     listExams,
     findExam,
@@ -145,6 +188,9 @@ module.exports = {
     insertExam,
     updateExam,
     hasApplications,
+    hasConfirmedCorrections,
+    lockApplicationsByExam,
+    resetVersionsForApplications,
     archiveExam,
     replaceExamQuestions,
     listOwnedQuestionIds
