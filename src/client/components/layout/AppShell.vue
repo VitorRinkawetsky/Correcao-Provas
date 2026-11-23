@@ -1,5 +1,16 @@
+
 <script setup>
-import { BarChart3, BookOpenCheck, ClipboardList, GraduationCap, Home, ListChecks, LogOut, Users } from '@lucide/vue';
+import {
+    BarChart3,
+    BookOpenCheck,
+    ClipboardList,
+    GraduationCap,
+    Home,
+    ListChecks,
+    LogOut,
+    ScanLine,
+    Users
+} from '@lucide/vue';
 import { ref } from 'vue';
 import { RouterLink, RouterView, useRouter } from 'vue-router';
 
@@ -47,22 +58,32 @@ const handleLogout = async () => {
                         <Home :size="18" :stroke-width="1.8" />
                         <span>Home</span>
                     </RouterLink>
+
                     <RouterLink to="/provas" class="main-navigation__link">
                         <ListChecks :size="18" :stroke-width="1.8" />
                         <span>Provas</span>
                     </RouterLink>
+
                     <RouterLink to="/aplicacoes" class="main-navigation__link">
                         <ClipboardList :size="18" :stroke-width="1.8" />
                         <span>Aplicações</span>
                     </RouterLink>
+
+                    <RouterLink to="/aplicacoes" class="main-navigation__link">
+                        <ScanLine :size="18" :stroke-width="1.8" />
+                        <span>Corrigir</span>
+                    </RouterLink>
+
                     <RouterLink to="/turmas" class="main-navigation__link">
                         <Users :size="18" :stroke-width="1.8" />
                         <span>Turmas</span>
                     </RouterLink>
+
                     <RouterLink to="/questoes" class="main-navigation__link">
                         <BookOpenCheck :size="18" :stroke-width="1.8" />
                         <span>Questões</span>
                     </RouterLink>
+
                     <RouterLink to="/relatorios" class="main-navigation__link">
                         <BarChart3 :size="18" :stroke-width="1.8" />
                         <span>Relatórios</span>
@@ -74,6 +95,7 @@ const handleLogout = async () => {
                         <strong>{{ auth.state.professor?.fullName }}</strong>
                         <small>{{ auth.state.professor?.email }}</small>
                     </span>
+
                     <button
                         class="teacher-account__logout"
                         type="button"
@@ -86,6 +108,7 @@ const handleLogout = async () => {
                     </button>
                 </div>
             </div>
+
             <p v-if="logoutError" class="site-header__error" role="alert">
                 {{ logoutError }}
             </p>
