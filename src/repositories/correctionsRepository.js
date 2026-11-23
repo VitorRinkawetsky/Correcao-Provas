@@ -455,9 +455,10 @@ const findCorrectionContext = async (code, teacherId, db = pool) => {
             AND (
                 version.qr_code_payload = ?
                 OR assignment.qr_code_payload = ?
+                OR version.public_code = ?
             )
         LIMIT 1
-    `, [code, teacherId, code, code]);
+    `, [code, teacherId, code, code, code]);
 
     if (!rows[0]) return null;
 
@@ -733,6 +734,10 @@ const updateCorrection = async (id, data, db = pool) => {
 };
 
 // Recalcula o status da aplicação a partir das correções confirmadas.
+// Recalcula applications.status a partir das correcoes confirmadas: 'in_correction' com
+// a primeira confirmada, 'closed' quando todos os alunos ativos da turma ja tem correcao
+// (identificado por student_id quando ha identificacao, por matricula quando nao ha).
+// Quando a aplicacao fecha, fecha a prova tambem se todas as suas aplicacoes ja fecharam.
 const refreshApplicationStatus = async (applicationId, db = pool) => {
     const [applicationRows] = await db.execute(
         'SELECT class_id AS classId, exam_id AS examId, status FROM applications WHERE id = ?',
@@ -780,6 +785,7 @@ const refreshApplicationStatus = async (applicationId, db = pool) => {
         }
     }
 };
+
 
 module.exports = {
     findCorrectionContext,

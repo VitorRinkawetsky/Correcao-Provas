@@ -20,6 +20,9 @@ const validatePayload = async (body, teacherId, db) => {
     if (!title || title.length > 180) {
         details.push({ field: 'title', message: 'Informe um titulo com ate 180 caracteres' });
     }
+    if (questions.length < 1) {
+        details.push({ field: 'questions', message: 'A prova deve possuir ao menos uma questao' });
+    }
     if (questions.length > MAX_QUESTIONS) {
         details.push({
             field: 'questions',
@@ -149,5 +152,6 @@ module.exports = {
     details,
     create,
     update,
-    archive
+    archive,
+    validatePayload
 };

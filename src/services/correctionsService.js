@@ -603,6 +603,10 @@ function createCorrectionsService({
                     transaction
                 );
 
+                if (payload.status === 'confirmed') {
+                    await repository.refreshApplicationStatus(version.applicationId, transaction);
+                }
+
                 const created = await repository.findCorrectionSummaryById(
                     correctionId,
                     ownerId,
@@ -709,6 +713,20 @@ function createCorrectionsService({
         }
 
         return databaseClient.withTransaction(async (transaction) => {
+            const conflict = await repository.findQrCorrectionConflict(
+                context.examVersionId,
+                context.assignedStudentId || null,
+                studentRegistration || null,
+                transaction
+            );
+            if (conflict) {
+                throw new ApiError(
+                    409,
+                    'CORRECTION_CONFLICT',
+                    'Ja existe uma correcao para este aluno nesta versao.'
+                );
+            }
+
             const answerKey = await repository.findQrAnswerKey(
                 context.applicationId,
                 context.examVersionId,
@@ -741,6 +759,8 @@ function createCorrectionsService({
                 teacherId: ownerId,
                 notes: payload.notes
             }, transaction);
+
+            await repository.refreshApplicationStatus(context.applicationId, transaction);
 
             return {
                 id: correctionId,
@@ -842,18 +862,21 @@ function createCorrectionsService({
             throw new ApiError(400, 'VALIDATION_ERROR', 'Informe a matricula do aluno');
         }
 
-        await databaseClient.withTransaction((transaction) => repository.updateCorrection(
-            correctionId,
-            {
-                teacherId: ownerId,
-                studentName,
-                studentRegistration,
-                totalScore,
-                notes: payload.notes,
-                answers: normalizedAnswers
-            },
-            transaction
-        ));
+        await databaseClient.withTransaction(async (transaction) => {
+            await repository.updateCorrection(
+                correctionId,
+                {
+                    teacherId: ownerId,
+                    studentName,
+                    studentRegistration,
+                    totalScore,
+                    notes: payload.notes,
+                    answers: normalizedAnswers
+                },
+                transaction
+            );
+            await repository.refreshApplicationStatus(current.applicationId, transaction);
+        });
 
         return getCorrection(correctionId, ownerId);
     }

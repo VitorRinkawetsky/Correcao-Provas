@@ -19,6 +19,11 @@ const handleApiError = (error, _request, response, _next) => {
             code: 'VALIDATION_ERROR', message: 'JSON invalido', details: []
         } });
     }
+    if (error.type === 'entity.too.large') {
+        return response.status(413).json({ error: {
+            code: 'PAYLOAD_TOO_LARGE', message: 'Corpo da requisicao excede o tamanho maximo permitido', details: []
+        } });
+    }
     if (error.code === 'ER_DUP_ENTRY') {
         return response.status(409).json({ error: {
             code: 'CONFLICT', message: 'E-mail, matricula ou codigo ja cadastrado', details: []

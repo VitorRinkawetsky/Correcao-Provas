@@ -48,6 +48,14 @@ async function create(teacherId, body) {
       );
     }
 
+    if (Number(exam.questionCount) === 0) {
+      throw new ApiError(
+        409,
+        'CONFLICT',
+        'A prova não possui questões.'
+      );
+    }
+
     const classItem = await repository.findOwnedClass(
       classId,
       ownerId,
@@ -56,6 +64,15 @@ async function create(teacherId, body) {
 
     if (!classItem) {
       throw new ApiError(404, 'NOT_FOUND', 'Turma não encontrada.');
+    }
+
+    const studentsCount = await repository.countActiveStudents(classId, connection);
+    if (studentsCount === 0) {
+      throw new ApiError(
+        409,
+        'CONFLICT',
+        'A turma não possui alunos matriculados.'
+      );
     }
 
     const applicationId = await repository.insertApplication(

@@ -23,7 +23,7 @@ const versoes = ref([
 ])
 
 watch(quantidadeVersoes, (novaBruta) => {
-  const nova = Math.min(50, Math.max(1, Number(novaBruta) || 1))
+  const nova = Math.min(50, Math.max(1, Math.round(Number(novaBruta) || 1)))
   quantidadeVersoes.value = nova
 
   const atual = versoes.value.length

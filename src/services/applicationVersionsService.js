@@ -79,6 +79,9 @@ async function generateVersions(applicationId, teacherId, body, repositoryClient
 
   for (const config of configs) {
     if (
+      typeof config !== 'object' ||
+      config === null ||
+      Array.isArray(config) ||
       typeof config.embaralharQuestoes !== 'boolean' ||
       typeof config.embaralharAlternativas !== 'boolean' ||
       typeof config.identificacao !== 'boolean'

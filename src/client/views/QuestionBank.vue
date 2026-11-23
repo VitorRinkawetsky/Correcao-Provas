@@ -13,12 +13,15 @@ const { questions, deleteQuestion, loadQuestions } = useQuestionStore();
 const loadError = ref('');
 const actionError = ref('');
 const deletingId = ref(null);
+const isLoading = ref(true);
 
 onMounted(async () => {
     try {
         await loadQuestions();
     } catch (error) {
         loadError.value = error.message;
+    } finally {
+        isLoading.value = false;
     }
 });
 
@@ -120,7 +123,9 @@ const handleDelete = async (question) => {
             {{ filteredQuestions.length === 1 ? 'questão encontrada' : 'questões encontradas' }}
         </div>
 
-        <div v-if="filteredQuestions.length" class="question-list" role="list">
+        <p v-if="isLoading" role="status">Carregando questões...</p>
+
+        <div v-else-if="filteredQuestions.length" class="question-list" role="list">
             <article
                 v-for="question in filteredQuestions"
                 :key="question.id"
