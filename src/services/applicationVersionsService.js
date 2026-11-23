@@ -2,7 +2,7 @@
 const repository = require('../repositories/applicationVersionsRepository');
 const { ApiError } = require('../http/ApiError');
 
-async function getAnswerKey(versionId, teacherId) {
+async function getAnswerKey(versionId, teacherId, repositoryClient = repository) {
   const id = Number(versionId);
   const ownerId = Number(teacherId);
 
@@ -14,7 +14,7 @@ async function getAnswerKey(versionId, teacherId) {
     throw new ApiError(401, 'UNAUTHORIZED', 'Professor não identificado.');
   }
 
-  const rows = await repository.findAnswerKey(id, ownerId);
+  const rows = await repositoryClient.findAnswerKey(id, ownerId);
 
   if (rows.length === 0) {
     throw new ApiError(404, 'NOT_FOUND', 'Versão não encontrada.');
@@ -30,7 +30,12 @@ async function getAnswerKey(versionId, teacherId) {
         questionId: row.questionId,
         order: row.questionOrder,
         correctAlternative: null,
+        alternativeCount: 0,
       });
+    }
+
+    if (row.alternativeOrder != null) {
+      questionsMap.get(row.questionId).alternativeCount += 1;
     }
 
     if (Number(row.isCorrect) === 1) {
@@ -50,7 +55,7 @@ async function getAnswerKey(versionId, teacherId) {
   };
 }
 
-async function generateVersions(applicationId, teacherId, body) {
+async function generateVersions(applicationId, teacherId, body, repositoryClient = repository) {
   const id = Number(applicationId);
   const ownerId = Number(teacherId);
 
@@ -90,7 +95,7 @@ async function generateVersions(applicationId, teacherId, body) {
   }
 
   try {
-    return await repository.generateVersions(id, ownerId, configs);
+    return await repositoryClient.generateVersions(id, ownerId, configs);
   } catch (error) {
     if (error.statusCode === 404) {
       throw new ApiError(404, 'NOT_FOUND', error.message);
@@ -108,7 +113,7 @@ async function generateVersions(applicationId, teacherId, body) {
   }
 }
 
-async function listVersions(applicationId, teacherId) {
+async function listVersions(applicationId, teacherId, repositoryClient = repository) {
   const id = Number(applicationId);
   const ownerId = Number(teacherId);
 
@@ -128,22 +133,46 @@ async function listVersions(applicationId, teacherId) {
     );
   }
 
-  return repository.listVersions(id, ownerId);
+  return repositoryClient.listVersions(id, ownerId);
 }
 
-async function listAssignments(applicationId, teacherId) {
+async function listAssignments(applicationId, teacherId, repositoryClient = repository) {
   const id = Number(applicationId);
 
   if (!Number.isInteger(id) || id <= 0) {
     throw new ApiError(400, 'VALIDATION_ERROR', 'ID da aplicação inválido.');
   }
 
-  return repository.listAssignments(id, Number(teacherId));
+  return repositoryClient.listAssignments(id, Number(teacherId));
+}
+
+function createApplicationVersionsService({ repository: repositoryClient = repository } = {}) {
+  return {
+    getAnswerKey: (versionId, teacherId) => getAnswerKey(
+      versionId,
+      teacherId,
+      repositoryClient
+    ),
+    generateVersions: (applicationId, teacherId, body) => generateVersions(
+      applicationId,
+      teacherId,
+      body,
+      repositoryClient
+    ),
+    listVersions: (applicationId, teacherId) => listVersions(
+      applicationId,
+      teacherId,
+      repositoryClient
+    ),
+    listAssignments: (applicationId, teacherId) => listAssignments(
+      applicationId,
+      teacherId,
+      repositoryClient
+    )
+  };
 }
 
 module.exports = {
-  getAnswerKey,
-  generateVersions,
-  listVersions,
-  listAssignments,
+  ...createApplicationVersionsService(),
+  createApplicationVersionsService
 };

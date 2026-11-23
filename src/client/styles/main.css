@@ -110,6 +110,37 @@ h2 {
     flex-direction: column;
 }
 
+@page {
+    size: A4 portrait;
+    margin: 0;
+}
+
+@media print {
+    body.answer-sheet-printing {
+        margin: 0;
+        background: #fff;
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+    }
+
+    body.answer-sheet-printing .site-shell {
+        display: block;
+        min-height: 0;
+    }
+
+    body.answer-sheet-printing .skip-link,
+    body.answer-sheet-printing .site-header,
+    body.answer-sheet-printing .site-footer {
+        display: none !important;
+    }
+
+    body.answer-sheet-printing .site-main {
+        width: 210mm;
+        margin: 0;
+        padding: 0;
+    }
+}
+
 .site-header {
     position: sticky;
     z-index: 20;
