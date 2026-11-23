@@ -265,7 +265,6 @@ async function findCorrectionSummaryById(correctionId, teacherId, db = pool) {
 
     return rows[0] ?? null;
 }
-
 async function listPending(applicationId, teacherId, db = pool) {
     const [rows] = await db.execute(
         `SELECT
@@ -398,7 +397,6 @@ async function updateAssociation(correctionId, studentId, assignmentId, db = poo
     return result.affectedRows;
 }
 
-
 const findQrAnswerKey = async (applicationId, examVersionId, db = pool) => {
     const [rows] = await db.execute(`
         SELECT
@@ -406,20 +404,26 @@ const findQrAnswerKey = async (applicationId, examVersionId, db = pool) => {
             alternative.id AS correctAlternativeId,
             examQuestion.score
         FROM exam_version_questions AS versionQuestion
+        INNER JOIN exam_versions AS version
+            ON version.id = versionQuestion.exam_version_id
+        INNER JOIN applications AS application
+            ON application.id = version.application_id
         INNER JOIN exam_questions AS examQuestion
-            ON examQuestion.exam_id = (
-                SELECT exam_id FROM applications WHERE id = ?
-            )
+            ON examQuestion.exam_id = application.exam_id
             AND examQuestion.question_id = versionQuestion.question_id
+        INNER JOIN exam_version_alternatives AS versionAlternative
+            ON versionAlternative.exam_version_id = versionQuestion.exam_version_id
+            AND versionAlternative.question_id = versionQuestion.question_id
         INNER JOIN alternatives AS alternative
-            ON alternative.question_id = versionQuestion.question_id
+            ON alternative.id = versionAlternative.alternative_id
+            AND alternative.question_id = versionQuestion.question_id
             AND alternative.is_correct = TRUE
         WHERE versionQuestion.exam_version_id = ?
-    `, [applicationId, examVersionId]);
+            AND application.id = ?
+    `, [examVersionId, applicationId]);
 
     return rows;
 };
-
 
 const findCorrectionContext = async (code, teacherId, db = pool) => {
     const [rows] = await db.execute(`
@@ -508,7 +512,6 @@ const findCorrectionContext = async (code, teacherId, db = pool) => {
         questions: [...questionsById.values()]
     };
 };
-
 const insertQrCorrection = async (data, db = pool) => {
     const [result] = await db.execute(`
         INSERT INTO corrections (
@@ -708,7 +711,6 @@ const updateCorrection = async (id, data, db = pool) => {
         answer.awardedScore
     ])]);
 };
-
 
 module.exports = {
     findCorrectionContext,
