@@ -93,7 +93,7 @@ onMounted(async () => {
     class="button button--primary"
 >
     <FilePlus2 :size="17" />
-    Criar aplicação
+    Gerar prova
 </RouterLink>
 
                 <button
