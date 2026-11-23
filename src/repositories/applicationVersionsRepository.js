@@ -341,8 +341,105 @@ async function generateVersions(applicationId, teacherId, configs) {
     }
 }
 
+// Dados para o PDF: cabeçalho da versão + questões na ORDEM IMPRESSA, com enunciado,
+// pontuação e alternativas na ordem impressa. NÃO traz is_correct (gabarito fica no sistema).
+async function findPrintData(versionId, teacherId, db = pool) {
+    const [headRows] = await db.execute(
+        `SELECT
+            ev.id AS versionId,
+            ev.version_number AS versionNumber,
+            ev.with_student_identification AS withStudentIdentification,
+            ev.qr_code_payload AS qrCodePayload,
+            a.id AS applicationId,
+            a.created_at AS applicationDate,
+            e.title AS examTitle,
+            c.name AS className
+         FROM exam_versions ev
+         INNER JOIN applications a ON a.id = ev.application_id
+         INNER JOIN exams e ON e.id = a.exam_id
+         INNER JOIN classes c ON c.id = a.class_id
+         WHERE ev.id = ? AND a.teacher_id = ?`,
+        [versionId, teacherId]
+    );
+
+    if (!headRows.length) {
+        return null; // versão inexistente ou de outro professor
+    }
+
+    const head = headRows[0];
+    head.withStudentIdentification = Boolean(head.withStudentIdentification);
+
+    const [rows] = await db.execute(
+        `SELECT
+            evq.question_id AS questionId,
+            evq.printed_order AS questionOrder,
+            q.statement AS statement,
+            eq.score AS score,
+            eva.printed_order AS alternativeOrder,
+            alt.alternative_text AS alternativeText
+         FROM exam_version_questions evq
+         INNER JOIN exam_versions ev ON ev.id = evq.exam_version_id
+         INNER JOIN applications a ON a.id = ev.application_id
+         INNER JOIN questions q ON q.id = evq.question_id
+         INNER JOIN exam_questions eq
+             ON eq.exam_id = a.exam_id AND eq.question_id = evq.question_id
+         INNER JOIN exam_version_alternatives eva
+             ON eva.exam_version_id = evq.exam_version_id
+             AND eva.question_id = evq.question_id
+         INNER JOIN alternatives alt
+             ON alt.id = eva.alternative_id AND alt.question_id = evq.question_id
+         WHERE evq.exam_version_id = ?
+         ORDER BY evq.printed_order ASC, eva.printed_order ASC`,
+        [versionId]
+    );
+
+    const questionsMap = new Map();
+
+    for (const row of rows) {
+        if (!questionsMap.has(row.questionId)) {
+            questionsMap.set(row.questionId, {
+                questionId: row.questionId,
+                order: Number(row.questionOrder),
+                statement: row.statement,
+                score: Number(row.score),
+                alternatives: []
+            });
+        }
+
+        questionsMap.get(row.questionId).alternatives.push({
+            order: Number(row.alternativeOrder),
+            text: row.alternativeText
+        });
+    }
+
+    // Um cartão por aluno (com identificação) ou um único cartão da versão (sem identificação).
+    let assignments = [];
+
+    if (head.withStudentIdentification) {
+        const [assignmentRows] = await db.execute(
+            `SELECT
+                s.full_name AS studentName,
+                s.registration AS registration,
+                ea.qr_code_payload AS qrCodePayload
+             FROM exam_assignments ea
+             INNER JOIN students s ON s.id = ea.student_id
+             WHERE ea.exam_version_id = ?
+             ORDER BY s.full_name ASC, s.id ASC`,
+            [versionId]
+        );
+        assignments = assignmentRows;
+    }
+
+    return {
+        head,
+        questions: [...questionsMap.values()],
+        assignments
+    };
+}
+
 module.exports = {
     findAnswerKey,
+    findPrintData,
     generateVersions,
     listVersions,
     listAssignments

@@ -25,6 +25,8 @@ router.get(
 
 router.get('/:versionId/answer-key', controller.getAnswerKey);
 
+router.get('/:versionId/pdf', requireTeacher, downloadPdf);
+
 router.use(handleApiError);
 
 module.exports = router;

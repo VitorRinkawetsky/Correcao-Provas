@@ -63,6 +63,19 @@ async function listAssignments(request, response, next) {
     }
 }
 
+export async function downloadPdf(req, res, next) {
+  try {
+    const teacherId = req.session.teacherId;      // use o mesmo campo que as outras rotas usam
+    const pdf = await buildVersionPdf(Number(req.params.versionId), teacherId);
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="prova-versao-${req.params.versionId}.pdf"`,
+      'Content-Length': pdf.length,
+    });
+    res.send(pdf);
+  } catch (e) { next(e); }
+}
+
 module.exports = {
     getAnswerKey,
     generate,
