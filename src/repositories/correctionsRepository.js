@@ -512,6 +512,26 @@ const findCorrectionContext = async (code, teacherId, db = pool) => {
         questions: [...questionsById.values()]
     };
 };
+
+// Alem da constraint unica em (exam_version_id, student_id), cobre o caso de provas sem
+// identificacao (student_id sempre nulo), onde so a matricula informada identifica o aluno.
+const findQrCorrectionConflict = async (examVersionId, studentId, registration, db = pool) => {
+    const [rows] = await db.execute(`
+        SELECT id
+        FROM corrections
+        WHERE exam_version_id = ?
+            AND status = 'confirmed'
+            AND (
+                (? IS NOT NULL AND student_id = ?)
+                OR (? IS NOT NULL AND reported_student_registration = ?)
+            )
+        LIMIT 1
+        FOR UPDATE
+    `, [examVersionId, studentId, studentId, registration, registration]);
+
+    return rows[0] || null;
+};
+
 const insertQrCorrection = async (data, db = pool) => {
     const [result] = await db.execute(`
         INSERT INTO corrections (
@@ -712,6 +732,55 @@ const updateCorrection = async (id, data, db = pool) => {
     ])]);
 };
 
+// Recalcula o status da aplicação a partir das correções confirmadas.
+const refreshApplicationStatus = async (applicationId, db = pool) => {
+    const [applicationRows] = await db.execute(
+        'SELECT class_id AS classId, exam_id AS examId, status FROM applications WHERE id = ?',
+        [applicationId]
+    );
+    const application = applicationRows[0];
+    if (!application) return;
+
+    const [activeRows] = await db.execute(
+        "SELECT COUNT(*) AS count FROM class_students WHERE class_id = ? AND status = 'active'",
+        [application.classId]
+    );
+    const [correctedRows] = await db.execute(`
+        SELECT COUNT(DISTINCT COALESCE(c.student_id, c.reported_student_registration)) AS count
+        FROM corrections c
+        INNER JOIN exam_versions ev ON ev.id = c.exam_version_id
+        WHERE ev.application_id = ? AND c.status = 'confirmed'
+    `, [applicationId]);
+
+    const activeCount = Number(activeRows[0].count);
+    const correctedCount = Number(correctedRows[0].count);
+
+    let nextStatus = null;
+    if (activeCount > 0 && correctedCount >= activeCount) {
+        nextStatus = 'closed';
+    } else if (correctedCount > 0) {
+        nextStatus = 'in_correction';
+    }
+
+    if (!nextStatus || nextStatus === application.status) return;
+
+    await db.execute('UPDATE applications SET status = ? WHERE id = ?', [nextStatus, applicationId]);
+
+    if (nextStatus === 'closed') {
+        const [examRows] = await db.execute(`
+            SELECT COUNT(*) AS total, SUM(status = 'closed') AS closedCount
+            FROM applications WHERE exam_id = ?
+        `, [application.examId]);
+
+        if (Number(examRows[0].total) === Number(examRows[0].closedCount)) {
+            await db.execute(
+                "UPDATE exams SET status = 'closed' WHERE id = ? AND status NOT IN ('closed', 'archived')",
+                [application.examId]
+            );
+        }
+    }
+};
+
 module.exports = {
     findCorrectionContext,
     findQrAnswerKey,
@@ -734,5 +803,7 @@ module.exports = {
     findStudentForUpdate,
     findAssignment,
     findAssociationConflict,
-    updateAssociation
+    updateAssociation,
+    findQrCorrectionConflict,
+    refreshApplicationStatus
 };

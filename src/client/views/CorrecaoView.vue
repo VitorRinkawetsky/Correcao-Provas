@@ -585,7 +585,7 @@ onBeforeUnmount(() => {
             <section v-if="saved" class="resultado-salvo" aria-live="polite">
                 <p class="resultado-label">Correção finalizada</p>
                 <strong class="resultado-nota">
-                    Nota: {{ Number(savedScore ?? 0).toFixed(2).replace('.', ',') }}
+                    Nota: {{ Number(savedScore).toFixed(2) }}
                 </strong>
                 <p>{{ message }}</p>
                 <button class="btn btn-primary" type="button" @click="correctAnotherExam">
