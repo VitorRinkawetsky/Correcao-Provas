@@ -1,6 +1,7 @@
 
 const service = require('../services/applicationVersionsService');
 const { buildVersionPdf } = require('../services/applicationVersionPdfService');
+const { ApiError } = require('../http/ApiError');
 
 async function getAnswerKey(request, response, next) {
     try {
@@ -69,9 +70,7 @@ async function downloadPdf(request, response, next) {
         const versionId = Number(request.params.versionId);
 
         if (!Number.isSafeInteger(versionId) || versionId < 1) {
-            const error = new Error('Identificador de versão inválido.');
-            error.statusCode = 400;
-            throw error;
+            throw new ApiError(400, 'VALIDATION_ERROR', 'Identificador invalido', [{ field: 'versionId' }]);
         }
 
         const pdf = await buildVersionPdf(versionId, request.teacher?.id);

@@ -1,7 +1,7 @@
-const path = require('path');
 const PDFDocument = require('pdfkit');
 const QRCode = require('qrcode');
 const repository = require('../repositories/applicationVersionsRepository');
+const { ApiError } = require('../http/ApiError');
 const {
     ANSWER_SHEET_LAYOUT: L,
     QUESTIONS_PER_SHEET,
@@ -10,22 +10,19 @@ const {
 
 const PT = 72 / 25.4;
 const mm = (value) => value * PT;
-const font = (file) => path.join(__dirname, '../assets/fonts', file);
+const FONT_REGULAR = 'Helvetica';
+const FONT_BOLD = 'Helvetica-Bold';
 const letterOf = (order) => L.grid.letters[order - 1];
 
 async function buildVersionPdf(versionId, teacherId) {
     const data = await repository.findPrintData(versionId, teacherId);
 
     if (!data) {
-        const error = new Error('Versão não encontrada.');
-        error.statusCode = 404;
-        throw error;
+        throw new ApiError(404, 'NOT_FOUND', 'Versao nao encontrada');
     }
 
     if (data.questions.length === 0) {
-        const error = new Error('A versão não possui questões.');
-        error.statusCode = 400;
-        throw error;
+        throw new ApiError(400, 'VALIDATION_ERROR', 'A versao nao possui questoes');
     }
 
     // Texto do QR = EXATAMENTE o payload gravado no banco.
@@ -45,8 +42,6 @@ async function buildVersionPdf(versionId, teacherId) {
     }));
 
     const doc = new PDFDocument({ size: 'A4', margin: 0, autoFirstPage: false });
-    doc.registerFont('r', font('Roboto-Regular.ttf'));
-    doc.registerFont('b', font('Roboto-Bold.ttf'));
 
     const chunks = [];
     doc.on('data', (chunk) => chunks.push(chunk));
@@ -76,10 +71,10 @@ function drawExam(doc, data) {
     const newPage = (first) => {
         doc.addPage();
         y = L.margin;
-        doc.font('b').fontSize(first ? 15 : 10).fillColor('#000')
+        doc.font(FONT_BOLD).fontSize(first ? 15 : 10).fillColor('#000')
             .text(head.examTitle, mm(left), mm(y), { width: mm(width) });
         y += first ? 8 : 5;
-        doc.font('r').fontSize(10).text(
+        doc.font(FONT_REGULAR).fontSize(10).text(
             `Turma: ${head.className}    Data: ${date}    Versão ${head.versionNumber}`,
             mm(left), mm(y), { width: mm(width) }
         );
@@ -100,10 +95,10 @@ function drawExam(doc, data) {
         const score = String(question.score).replace('.', ',');
         const statement = `${index + 1}. ${question.statement}  (${score} pt)`;
 
-        doc.font('b').fontSize(10.5);
+        doc.font(FONT_BOLD).fontSize(10.5);
         const statementHeight = doc.heightOfString(statement, { width: mm(width) }) / PT;
 
-        doc.font('r').fontSize(10);
+        doc.font(FONT_REGULAR).fontSize(10);
         const alternativeHeights = question.alternatives.map((alt) =>
             doc.heightOfString(`${letterOf(alt.order)}) ${alt.text}`, { width: mm(width - 6) }) / PT + 1
         );
@@ -116,11 +111,11 @@ function drawExam(doc, data) {
             newPage(false);
         }
 
-        doc.font('b').fontSize(10.5)
+        doc.font(FONT_BOLD).fontSize(10.5)
             .text(statement, mm(left), mm(y), { width: mm(width) });
         y += statementHeight + 1;
 
-        doc.font('r').fontSize(10);
+        doc.font(FONT_REGULAR).fontSize(10);
         question.alternatives.forEach((alt, i) => {
             doc.text(`${letterOf(alt.order)}) ${alt.text}`, mm(left + 6), mm(y), { width: mm(width - 6) });
             y += alternativeHeights[i];
@@ -147,10 +142,10 @@ function drawAnswerSheets(doc, data, sheet) {
 
         const headerWidth = mm(L.header.width);
         let y = L.header.y;
-        doc.fillColor('#000').font('b').fontSize(13)
+        doc.fillColor('#000').font(FONT_BOLD).fontSize(13)
             .text('CARTÃO-RESPOSTA', mm(L.header.x), mm(y), { width: headerWidth });
         y += 8;
-        doc.font('r').fontSize(10);
+        doc.font(FONT_REGULAR).fontSize(10);
 
         if (sheet.student) {
             doc.text(`Aluno: ${sheet.student.name}`, mm(L.header.x), mm(y), { width: headerWidth });
@@ -172,7 +167,7 @@ function drawAnswerSheets(doc, data, sheet) {
         slice.forEach((question, slot) => {
             const first = bubbleCenter(slot, 0);
 
-            doc.font('r').fontSize(9).fillColor('#000').text(
+            doc.font(FONT_REGULAR).fontSize(9).fillColor('#000').text(
                 String(p * QUESTIONS_PER_SHEET + slot + 1),
                 mm(first.x - L.grid.bubbleOffset - L.grid.numberWidth),
                 mm(first.y - 1.6),
@@ -182,7 +177,7 @@ function drawAnswerSheets(doc, data, sheet) {
             question.alternatives.forEach((alt, a) => {
                 const c = bubbleCenter(slot, a);
 
-                doc.font('r').fontSize(9).text(
+                doc.font(FONT_REGULAR).fontSize(9).text(
                     letterOf(alt.order),
                     mm(c.x - L.grid.bubbleOffset),
                     mm(c.y - 1.6),
