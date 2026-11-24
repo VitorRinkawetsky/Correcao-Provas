@@ -18,6 +18,7 @@ import {
 
 const route = useRoute();
 const router = useRouter();
+
 const code = ref('');
 const loadedCode = ref('');
 const context = ref(null);
@@ -29,11 +30,15 @@ const errorMessage = ref('');
 const loading = ref(false);
 const processingImage = ref(false);
 const scanning = ref(false);
+const saved = ref(false);
+const savedScore = ref(null);
 const video = ref(null);
 const previewCanvas = ref(null);
 const recognition = ref(null);
-const savedScore = ref(null);
+
 let stream;
+let detector;
+let scanTimer;
 
 const correctionId = computed(() => route.params.correctionId || null);
 const isPersistedCorrection = computed(() => Boolean(correctionId.value));
@@ -41,12 +46,21 @@ const applicationId = computed(() => {
     const id = Number(route.params.id || context.value?.applicationId);
     return Number.isSafeInteger(id) && id > 0 ? id : null;
 });
+
 const maxScore = computed(() => (
     context.value?.questions?.reduce(
         (total, question) => total + Number(question.score || 0),
         0
     ) || 0
 ));
+
+const totalScore = computed(() => (
+    context.value?.questions?.reduce(
+        (total, question) => total + Number(question.awardedScore || 0),
+        0
+    ) || 0
+));
+
 const scanSummary = computed(() => {
     const results = recognition.value?.questions || [];
     return {
@@ -55,7 +69,15 @@ const scanSummary = computed(() => {
         blank: results.filter((result) => result.status === 'blank').length
     };
 });
-const isCameraSupported = computed(() => Boolean(navigator.mediaDevices?.getUserMedia));
+
+const isCameraSupported = computed(() => (
+    typeof navigator !== 'undefined'
+    && Boolean(navigator.mediaDevices?.getUserMedia)
+));
+
+const isQrDetectorSupported = computed(() => (
+    typeof window !== 'undefined' && 'BarcodeDetector' in window
+));
 
 function goToApplication() {
     router.push(applicationId.value
@@ -64,6 +86,7 @@ function goToApplication() {
 }
 
 function goToCorrectionList() {
+    if (!applicationId.value) return;
     router.push({
         name: 'application-corrections-list',
         params: { id: applicationId.value }
@@ -71,6 +94,7 @@ function goToCorrectionList() {
 }
 
 function goToPendingCorrections() {
+    if (!applicationId.value) return;
     router.push({
         name: 'application-unidentified-corrections',
         params: { id: applicationId.value }
@@ -79,6 +103,7 @@ function goToPendingCorrections() {
 
 function stopScanner() {
     scanning.value = false;
+    clearTimeout(scanTimer);
     stream?.getTracks().forEach((track) => track.stop());
     stream = null;
     if (video.value) video.value.srcObject = null;
@@ -97,11 +122,17 @@ function applyContext(data, contextCode) {
     studentRegistration.value = data.assignedStudentRegistration || '';
     answers.value = {};
     savedScore.value = null;
+    saved.value = false;
     clearRecognition();
 }
 
 async function loadContext() {
     const requestedCode = code.value.trim();
+    if (!requestedCode) {
+        errorMessage.value = 'Informe ou leia o código da prova.';
+        return null;
+    }
+
     loading.value = true;
     errorMessage.value = '';
     message.value = '';
@@ -110,36 +141,84 @@ async function loadContext() {
         applyContext(data, requestedCode);
         return data;
     } catch (error) {
-        errorMessage.value = error.message || 'Código inválido.';
+        errorMessage.value = error.message || 'Código inválido ou não encontrado.';
         return null;
     } finally {
         loading.value = false;
     }
 }
 
+async function scanFrame() {
+    if (!scanning.value || !video.value || !detector) return;
+
+    try {
+        const codes = await detector.detect(video.value);
+        if (codes[0]?.rawValue) {
+            const scannedCode = codes[0].rawValue;
+            clearTimeout(scanTimer);
+            detector = null;
+            code.value = scannedCode;
+            await loadContext();
+            return;
+        }
+    } catch {
+        // A leitura automática pode falhar em um frame; a captura manual continua disponível.
+    }
+
+    if (scanning.value) {
+        scanTimer = setTimeout(scanFrame, 250);
+    }
+}
+
 async function startScanner() {
     errorMessage.value = '';
     message.value = '';
+
     if (!isCameraSupported.value) {
-        errorMessage.value = 'Câmera indisponível. Envie uma foto ou informe o código manualmente.';
+        errorMessage.value = 'Câmera indisponível neste navegador. Envie uma foto ou informe o código manualmente.';
         return;
     }
+
     try {
+        if (isQrDetectorSupported.value) {
+            detector = new window.BarcodeDetector({ formats: ['qr_code'] });
+        } else {
+            detector = null;
+        }
+
         stream = await navigator.mediaDevices.getUserMedia({
+            audio: false,
             video: {
                 facingMode: { ideal: 'environment' },
                 width: { ideal: 1920 },
                 height: { ideal: 1080 }
-            },
-            audio: false
+            }
         });
+
+        if (!video.value) {
+            stopScanner();
+            return;
+        }
+
         video.value.srcObject = stream;
         await video.value.play();
         scanning.value = true;
+
+        if (detector) {
+            await scanFrame();
+        } else {
+            message.value = 'Câmera aberta. Capture o cartão para ler o QR Code e as respostas.';
+        }
     } catch (error) {
-        errorMessage.value = error.name === 'NotAllowedError'
-            ? 'Permissão da câmera negada. Envie uma foto ou informe o código manualmente.'
-            : 'Câmera indisponível. Envie uma foto ou informe o código manualmente.';
+        const cameraMessages = {
+            NotAllowedError: 'Permissão da câmera negada. Autorize o acesso ou informe o código manualmente.',
+            NotFoundError: 'Nenhuma câmera foi encontrada no dispositivo.',
+            NotReadableError: 'A câmera está sendo usada por outro aplicativo. Feche-o e tente novamente.',
+            OverconstrainedError: 'Não foi possível acessar a câmera solicitada.',
+            SecurityError: 'A câmera exige uma conexão segura (HTTPS) ou localhost.'
+        };
+        errorMessage.value = cameraMessages[error.name]
+            || 'Não foi possível acessar a câmera. Envie uma foto ou informe o código manualmente.';
         stopScanner();
     }
 }
@@ -148,9 +227,11 @@ async function processImageSource(source) {
     processingImage.value = true;
     errorMessage.value = '';
     message.value = '';
+
     try {
         const imageData = sourceToImageData(source);
         let detectedCode = '';
+
         try {
             detectedCode = await detectQrCode(source);
         } catch (error) {
@@ -161,6 +242,7 @@ async function processImageSource(source) {
         if (!requestedCode) {
             throw new Error('QR Code não encontrado. Informe o código manualmente e refaça a leitura.');
         }
+
         let targetContext = context.value;
         const contextChanged = !targetContext || requestedCode !== loadedCode.value;
         if (contextChanged) {
@@ -169,6 +251,7 @@ async function processImageSource(source) {
 
         const result = recognizeAnswerSheet(imageData, targetContext.questions);
         const nextAnswers = {};
+
         result.questions.forEach((readResult) => {
             if (readResult.status !== 'marked') return;
             const question = targetContext.questions.find(
@@ -177,12 +260,16 @@ async function processImageSource(source) {
             const alternative = question?.alternatives?.[readResult.selectedIndex];
             if (alternative) nextAnswers[question.questionId] = alternative.id;
         });
+
         if (contextChanged) applyContext(targetContext, requestedCode);
         answers.value = nextAnswers;
         recognition.value = result;
         savedScore.value = null;
+        saved.value = false;
+
         const count = scanSummary.value.marked;
         message.value = `${count} ${count === 1 ? 'resposta lida' : 'respostas lidas'} automaticamente. Revise antes de salvar.`;
+
         await nextTick();
         drawRecognitionPreview(previewCanvas.value, result);
     } catch (error) {
@@ -205,6 +292,7 @@ async function handlePhoto(event) {
     const input = event.target;
     const file = input.files?.[0];
     if (!file) return;
+
     let bitmap;
     try {
         bitmap = await loadImageFile(file);
@@ -222,6 +310,7 @@ function markReviewed(question) {
         (item) => Number(item.questionId) === Number(question.questionId)
     );
     if (!result) return;
+
     const selectedId = answers.value[question.questionId];
     result.selectedIndex = question.alternatives.findIndex(
         (alternative) => Number(alternative.id) === Number(selectedId)
@@ -249,22 +338,24 @@ function readStatusLabel(questionId) {
 async function loadCorrection() {
     loading.value = true;
     errorMessage.value = '';
+
     try {
         const data = await getCorrection(correctionId.value);
         context.value = data;
-        code.value = data.qrCodePayload;
-        loadedCode.value = data.qrCodePayload;
+        code.value = data.qrCodePayload || '';
+        loadedCode.value = data.qrCodePayload || '';
         studentName.value = data.studentName || '';
         studentRegistration.value = data.studentRegistration || '';
         answers.value = Object.fromEntries(
             data.questions
-                .filter((question) => question.selectedAlternativeId)
+                .filter((question) => question.selectedAlternativeId != null)
                 .map((question) => [question.questionId, question.selectedAlternativeId])
         );
         savedScore.value = Number(data.totalScore ?? data.questions.reduce(
             (total, question) => total + Number(question.awardedScore || 0),
             0
         ));
+        saved.value = false;
         clearRecognition();
     } catch (error) {
         errorMessage.value = error.message || 'Não foi possível carregar a correção.';
@@ -274,12 +365,15 @@ async function loadCorrection() {
 }
 
 async function submitCorrection() {
+    if (!context.value?.questions?.length) return;
+
     loading.value = true;
     errorMessage.value = '';
     message.value = '';
+
     try {
         const payload = {
-            ...(!isPersistedCorrection.value ? { qrCodePayload: loadedCode.value } : {}),
+            ...(!isPersistedCorrection.value ? { qrCodePayload: loadedCode.value || code.value } : {}),
             studentName: studentName.value,
             studentRegistration: studentRegistration.value,
             notes: context.value?.notes || '',
@@ -290,20 +384,25 @@ async function submitCorrection() {
                     : Number(answers.value[question.questionId])
             }))
         };
+
         const result = isPersistedCorrection.value
             ? await updateCorrection(correctionId.value, payload)
             : await createCorrection(payload);
-        savedScore.value = Number(result.totalScore);
-        const savedMessage = `Correção salva. Nota: ${result.totalScore}`;
-        if (!isPersistedCorrection.value && result.id) {
+
+        savedScore.value = Number(result?.totalScore ?? 0);
+        saved.value = true;
+        message.value = 'Correção salva com sucesso!';
+
+        if (!isPersistedCorrection.value && result?.id) {
             await router.push({
                 name: 'correction-details',
                 params: { correctionId: result.id }
             });
-        } else {
+        } else if (isPersistedCorrection.value) {
             await loadCorrection();
+            saved.value = true;
+            message.value = 'Correção salva com sucesso!';
         }
-        message.value = savedMessage;
     } catch (error) {
         errorMessage.value = error.message || 'Não foi possível salvar a correção.';
     } finally {
@@ -318,12 +417,40 @@ function answerLetter(question) {
     return index >= 0 ? String.fromCharCode(65 + index) : 'em branco';
 }
 
+async function correctAnotherExam() {
+    stopScanner();
+    const id = applicationId.value;
+
+    code.value = '';
+    loadedCode.value = '';
+    context.value = null;
+    answers.value = {};
+    studentName.value = '';
+    studentRegistration.value = '';
+    message.value = '';
+    errorMessage.value = '';
+    saved.value = false;
+    savedScore.value = null;
+    clearRecognition();
+
+    if (id) {
+        await router.push({
+            name: 'application-corrections',
+            params: { id }
+        });
+    } else {
+        await router.push({ name: 'applications' });
+    }
+}
+
 onMounted(() => {
     if (isPersistedCorrection.value) loadCorrection();
 });
+
 watch(correctionId, (id, previousId) => {
     if (id && id !== previousId) loadCorrection();
 });
+
 onBeforeUnmount(() => {
     stopScanner();
     clearRecognition();
@@ -332,16 +459,18 @@ onBeforeUnmount(() => {
 
 <template>
     <section class="pagina">
-        <button class="voltar" @click="goToApplication">
+        <button class="voltar" type="button" @click="goToApplication">
             ← Voltar aos detalhes
         </button>
+
         <div class="card">
             <h1>Corrigir prova</h1>
             <p class="subtitulo">
                 {{ isPersistedCorrection
-                    ? 'Revise as respostas e ajuste a correção persistida.'
-                    : 'Fotografe o cartão para ler QR e respostas automaticamente.' }}
+                    ? 'Revise as respostas e ajuste a correção salva.'
+                    : 'Leia o QR Code ou fotografe o cartão-resposta para preencher as respostas automaticamente.' }}
             </p>
+
             <div v-if="applicationId" class="atalhos-correcao">
                 <button class="btn btn-secondary" type="button" @click="goToCorrectionList">
                     Histórico de correções
@@ -355,19 +484,22 @@ onBeforeUnmount(() => {
                 v-show="scanning"
                 ref="video"
                 class="camera"
-                aria-label="Câmera do cartão-resposta"
-                playsinline
+                autoplay
                 muted
+                playsinline
+                aria-label="Câmera do cartão-resposta e leitor de QR Code"
             ></video>
+
             <div v-if="!isPersistedCorrection" class="acoes">
                 <button
-                    class="btn btn-primary"
+                    class="btn btn-primary btn-camera"
                     type="button"
                     :disabled="scanning || loading || processingImage"
                     @click="startScanner"
                 >
                     {{ scanning ? 'Câmera aberta' : 'Ler QR Code / abrir câmera' }}
                 </button>
+
                 <button
                     v-if="scanning"
                     class="btn btn-primary"
@@ -377,11 +509,18 @@ onBeforeUnmount(() => {
                 >
                     {{ processingImage ? 'Processando...' : 'Capturar cartão' }}
                 </button>
-                <button v-if="scanning" class="btn btn-secondary" type="button" @click="stopScanner">
+
+                <button
+                    v-if="scanning"
+                    class="btn btn-secondary"
+                    type="button"
+                    @click="stopScanner"
+                >
                     Parar câmera
                 </button>
+
                 <label class="btn btn-secondary arquivo-botao" :class="{ desabilitado: processingImage }">
-                    {{ processingImage ? 'Processando foto...' : 'Enviar foto' }}
+                    {{ processingImage ? 'Processando foto...' : 'Enviar foto do cartão' }}
                     <input
                         class="arquivo-input"
                         type="file"
@@ -392,20 +531,34 @@ onBeforeUnmount(() => {
                     >
                 </label>
             </div>
+
             <p v-if="!isPersistedCorrection" class="privacidade">
                 A foto é processada somente neste aparelho e não é enviada nem armazenada.
             </p>
 
-            <form v-if="!isPersistedCorrection" class="codigo-form" @submit.prevent="loadContext">
+            <form
+                v-if="!isPersistedCorrection"
+                class="codigo-form"
+                @submit.prevent="loadContext"
+            >
                 <label for="codigo-prova">Código da prova (alternativa ao leitor de QR)</label>
                 <div class="linha">
-                    <input id="codigo-prova" v-model="code" required placeholder="Cole o código do QR Code">
-                    <button class="btn btn-secondary" :disabled="loading">Buscar</button>
+                    <input
+                        id="codigo-prova"
+                        v-model="code"
+                        required
+                        placeholder="Cole o código do QR Code"
+                        autocomplete="off"
+                    >
+                    <button class="btn btn-secondary" type="submit" :disabled="loading">
+                        Buscar
+                    </button>
                 </div>
             </form>
 
-            <p v-if="errorMessage" class="mensagem erro">{{ errorMessage }}</p>
-            <p v-if="message" class="mensagem sucesso">{{ message }}</p>
+            <p v-if="loading" class="mensagem carregando">Processando...</p>
+            <p v-if="processingImage" class="mensagem carregando">Lendo cartão-resposta...</p>
+            <p v-if="errorMessage" class="mensagem erro" role="alert">{{ errorMessage }}</p>
 
             <section v-if="recognition" class="revisao-leitura" aria-labelledby="revisao-titulo">
                 <div class="revisao-cabecalho">
@@ -429,24 +582,51 @@ onBeforeUnmount(() => {
                 ></canvas>
             </section>
 
-            <form v-if="context" class="correcao-form" @submit.prevent="submitCorrection">
+            <section v-if="saved" class="resultado-salvo" aria-live="polite">
+                <p class="resultado-label">Correção finalizada</p>
+                <strong class="resultado-nota">
+                    Nota: {{ Number(savedScore).toFixed(2) }}
+                </strong>
+                <p>{{ message }}</p>
+                <button class="btn btn-primary" type="button" @click="correctAnotherExam">
+                    Corrigir outra prova
+                </button>
+            </section>
+
+            <p v-else-if="message" class="mensagem sucesso" role="status">{{ message }}</p>
+
+            <form
+                v-if="context && !saved"
+                class="correcao-form"
+                @submit.prevent="submitCorrection"
+            >
                 <div class="resumo">
                     <span>{{ context.examTitle }} · Versão {{ context.versionNumber }}</span>
-                    <strong v-if="savedScore != null" class="nota-salva">
-                        Nota: {{ Number(savedScore).toFixed(2) }}
+                    <strong v-if="isPersistedCorrection && savedScore != null" class="nota-salva">
+                        Nota total: {{ Number(savedScore).toFixed(2).replace('.', ',') }}
                     </strong>
-                    <strong v-else>Valor da prova: {{ maxScore.toFixed(2) }}</strong>
+                    <strong v-else>Valor da prova: {{ maxScore.toFixed(2).replace('.', ',') }}</strong>
                 </div>
+
                 <div class="identificacao">
                     <label>
                         Nome do aluno
-                        <input v-model="studentName" :readonly="Boolean(context.assignedStudentId)" required>
+                        <input
+                            v-model="studentName"
+                            :readonly="Boolean(context.assignedStudentId)"
+                            required
+                        >
                     </label>
                     <label>
                         Matrícula
-                        <input v-model="studentRegistration" :readonly="Boolean(context.assignedStudentId)" required>
+                        <input
+                            v-model="studentRegistration"
+                            :readonly="Boolean(context.assignedStudentId)"
+                            required
+                        >
                     </label>
                 </div>
+
                 <div
                     v-for="question in context.questions"
                     :key="question.questionId"
@@ -456,11 +636,12 @@ onBeforeUnmount(() => {
                         'questao--lida': ['marked', 'reviewed'].includes(readResult(question.questionId)?.status)
                     }"
                 >
-                    <p>
+                    <p class="enunciado">
                         <strong>{{ question.printedOrder }}.</strong>
                         {{ question.statement }}
                         <span class="pontuacao">({{ Number(question.score || 0).toFixed(2) }} pts)</span>
                     </p>
+
                     <p
                         v-if="readStatusLabel(question.questionId)"
                         class="status-leitura"
@@ -468,19 +649,29 @@ onBeforeUnmount(() => {
                     >
                         {{ readStatusLabel(question.questionId) }}
                     </p>
-                    <label v-for="alternative in question.alternatives" :key="alternative.id" class="alternativa">
+
+                    <label
+                        v-for="alternative in question.alternatives"
+                        :key="alternative.id"
+                        class="alternativa"
+                    >
                         <input
                             v-model="answers[question.questionId]"
                             type="radio"
                             :name="`question-${question.questionId}`"
                             :value="alternative.id"
+                            :disabled="loading"
                             @change="markReviewed(question)"
                         >
-                        {{ alternative.text }}
-                        <span v-if="isPersistedCorrection && alternative.isCorrect" class="correta">
+                        <span>{{ alternative.text }}</span>
+                        <span
+                            v-if="isPersistedCorrection && alternative.isCorrect"
+                            class="correta"
+                        >
                             · correta
                         </span>
                     </label>
+
                     <p v-if="isPersistedCorrection" class="resultado-questao">
                         Resposta:
                         {{ answerLetter(question) }}
@@ -488,8 +679,17 @@ onBeforeUnmount(() => {
                         · {{ Number(question.awardedScore || 0).toFixed(2) }} pts
                     </p>
                 </div>
-                <button class="btn btn-primary" :disabled="loading || processingImage">
-                    {{ isPersistedCorrection ? 'Salvar ajustes' : 'Salvar correção e calcular nota' }}
+
+                <button
+                    class="btn btn-primary btn-salvar"
+                    type="submit"
+                    :disabled="loading || processingImage"
+                >
+                    {{ loading
+                        ? 'Salvando...'
+                        : isPersistedCorrection
+                            ? 'Salvar ajustes'
+                            : 'Salvar correção e calcular nota' }}
                 </button>
             </form>
         </div>
@@ -497,50 +697,388 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-.pagina { padding: 24px; }
-.voltar { border: 0; background: none; color: var(--color-primary, #0f5e56); cursor: pointer; margin-bottom: 16px; font-size: 1rem; }
-.card { background: var(--color-surface, #fff); border-radius: var(--radius-md, 8px); padding: 24px; display: flex; flex-direction: column; gap: 16px; }
-.subtitulo { color: var(--color-text-muted, #6b7280); }
-.atalhos-correcao { display: flex; flex-wrap: wrap; gap: 12px; }
-.camera { width: min(100%, 480px); min-height: 220px; background: #111; border-radius: 8px; object-fit: cover; }
-.acoes, .linha { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
-.arquivo-botao { display: inline-flex; align-items: center; cursor: pointer; }
-.arquivo-input { position: absolute; width: 1px; height: 1px; overflow: hidden; opacity: 0; }
-.desabilitado { opacity: 0.6; pointer-events: none; }
-.privacidade { margin: -6px 0 0; color: var(--color-text-muted, #6b7280); font-size: 0.88rem; }
-.codigo-form, .identificacao label { display: flex; flex-direction: column; gap: 6px; }
-.codigo-form input, .identificacao input { padding: 10px; border: 1px solid var(--color-border, #e5e7eb); border-radius: 6px; }
-.codigo-form { max-width: 640px; }
-.linha input { flex: 1; }
-.correcao-form { display: flex; flex-direction: column; gap: 18px; }
-.identificacao { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-.questao { border-top: 1px solid var(--color-border, #e5e7eb); border-left: 4px solid transparent; padding: 14px 0 0 12px; }
-.questao--lida { border-left-color: #16a34a; }
-.questao--duvida { border-left-color: #eab308; background: #fefce8; }
-.alternativa { display: block; padding: 6px 0; }
-.resumo { display: flex; justify-content: space-between; gap: 12px; padding: 12px; background: #f3f4f6; border-radius: 6px; }
-.pontuacao, .resultado-questao { color: var(--color-text-muted, #6b7280); font-size: 0.9rem; }
-.correta { color: #166534; font-weight: 600; }
-.nota-salva { color: #166534; font-size: 1.2rem; }
-.revisao-leitura { padding: 16px; border: 1px solid var(--color-border, #d8e1df); border-radius: 8px; background: #f8fafc; }
-.revisao-cabecalho { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 12px; }
-.revisao-cabecalho h2, .revisao-cabecalho p { margin: 0 0 6px; }
-.preview-cartao { display: block; width: min(100%, 600px); height: auto; margin: 0 auto; border: 1px solid #cbd5e1; background: white; }
-.legenda { display: flex; flex-wrap: wrap; gap: 12px; font-size: 0.86rem; }
-.legenda span { display: inline-flex; align-items: center; gap: 5px; }
-.legenda-cor { width: 12px; height: 12px; border-radius: 50%; }
-.legenda-cor--verde { background: #16a34a; }
-.legenda-cor--amarela { background: #eab308; }
-.status-leitura { display: inline-block; margin: 0 0 6px; padding: 4px 8px; border-radius: 999px; font-size: 0.82rem; font-weight: 600; }
-.status-leitura--marked, .status-leitura--reviewed { color: #166534; background: #dcfce7; }
-.status-leitura--ambiguous { color: #854d0e; background: #fef9c3; }
-.status-leitura--blank { color: #475569; background: #e2e8f0; }
-.mensagem { padding: 10px 12px; border-radius: 6px; }
-.erro { color: #b91c1c; background: #fee2e2; }
-.sucesso { color: #166534; background: #dcfce7; }
+.pagina {
+    width: 100%;
+    max-width: 100%;
+    padding: 24px;
+    box-sizing: border-box;
+    overflow-x: hidden;
+}
+
+.voltar {
+    border: 0;
+    background: none;
+    color: var(--color-primary, #0f5e56);
+    cursor: pointer;
+    margin-bottom: 16px;
+    font-size: 1rem;
+    min-height: 44px;
+}
+
+.card {
+    width: 100%;
+    max-width: 900px;
+    margin: 0 auto;
+    box-sizing: border-box;
+    background: var(--color-surface, #fff);
+    border-radius: var(--radius-md, 8px);
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.subtitulo {
+    color: var(--color-text-muted, #6b7280);
+}
+
+.atalhos-correcao,
+.acoes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.camera {
+    display: block;
+    width: 100%;
+    max-height: 60vh;
+    min-height: 180px;
+    background: #111;
+    border-radius: 8px;
+    object-fit: cover;
+}
+
+.btn-camera {
+    min-height: 48px;
+}
+
+.arquivo-botao {
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+.arquivo-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    opacity: 0;
+}
+
+.desabilitado {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.privacidade {
+    margin: -6px 0 0;
+    color: var(--color-text-muted, #6b7280);
+    font-size: 0.88rem;
+}
+
+.codigo-form,
+.identificacao label {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.codigo-form {
+    width: 100%;
+    max-width: 640px;
+}
+
+.codigo-form input,
+.identificacao input {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    padding: 12px;
+    border: 1px solid var(--color-border, #e5e7eb);
+    border-radius: 6px;
+    font: inherit;
+}
+
+.linha {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.linha input {
+    flex: 1;
+}
+
+.correcao-form {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    min-width: 0;
+}
+
+.identificacao {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.questao {
+    min-width: 0;
+    border-top: 1px solid var(--color-border, #e5e7eb);
+    border-left: 4px solid transparent;
+    padding: 14px 0 0 12px;
+}
+
+.questao--lida {
+    border-left-color: #16a34a;
+}
+
+.questao--duvida {
+    border-left-color: #eab308;
+    background: #fefce8;
+}
+
+.enunciado {
+    overflow-wrap: anywhere;
+}
+
+.alternativa {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 44px;
+    padding: 8px;
+    cursor: pointer;
+    border-radius: 6px;
+    overflow-wrap: anywhere;
+}
+
+.alternativa input {
+    flex: 0 0 auto;
+    width: 18px;
+    height: 18px;
+}
+
+.alternativa:has(input:checked) {
+    background: #e8f5f2;
+}
+
+.resumo {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px;
+    background: #f3f4f6;
+    border-radius: 6px;
+}
+
+.pontuacao,
+.resultado-questao {
+    color: var(--color-text-muted, #6b7280);
+    font-size: 0.9rem;
+}
+
+.correta {
+    color: #166534;
+    font-weight: 600;
+}
+
+.nota-salva {
+    color: #166534;
+    font-size: 1.1rem;
+}
+
+.revisao-leitura {
+    padding: 16px;
+    border: 1px solid var(--color-border, #d8e1df);
+    border-radius: 8px;
+    background: #f8fafc;
+}
+
+.revisao-cabecalho {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 12px;
+}
+
+.revisao-cabecalho h2,
+.revisao-cabecalho p {
+    margin: 0 0 6px;
+}
+
+.preview-cartao {
+    display: block;
+    width: min(100%, 600px);
+    height: auto;
+    margin: 0 auto;
+    border: 1px solid #cbd5e1;
+    background: white;
+}
+
+.legenda {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    font-size: 0.86rem;
+}
+
+.legenda span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.legenda-cor {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+}
+
+.legenda-cor--verde {
+    background: #16a34a;
+}
+
+.legenda-cor--amarela {
+    background: #eab308;
+}
+
+.status-leitura {
+    display: inline-block;
+    margin: 0 0 6px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 600;
+}
+
+.status-leitura--marked,
+.status-leitura--reviewed {
+    color: #166534;
+    background: #dcfce7;
+}
+
+.status-leitura--ambiguous {
+    color: #854d0e;
+    background: #fef9c3;
+}
+
+.status-leitura--blank {
+    color: #475569;
+    background: #e2e8f0;
+}
+
+.mensagem {
+    padding: 10px 12px;
+    border-radius: 6px;
+}
+
+.erro {
+    color: #b91c1c;
+    background: #fee2e2;
+}
+
+.sucesso {
+    color: #166534;
+    background: #dcfce7;
+}
+
+.carregando {
+    color: var(--color-text-muted, #6b7280);
+}
+
+.resultado-salvo {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 20px;
+    border: 1px solid #b7dfd2;
+    border-radius: 10px;
+    background: #effaf5;
+}
+
+.resultado-label {
+    margin: 0;
+    font-weight: 600;
+    color: #166534;
+}
+
+.resultado-nota {
+    font-size: 2rem;
+    color: #0f5e56;
+}
+
+.btn-salvar {
+    min-height: 48px;
+}
+
 @media (max-width: 640px) {
-    .identificacao { grid-template-columns: 1fr; }
-    .linha { align-items: stretch; flex-direction: column; }
-    .revisao-cabecalho, .resumo { flex-direction: column; }
+    .pagina {
+        padding: 12px;
+        padding-bottom: 90px;
+    }
+
+    .card {
+        padding: 16px;
+        gap: 14px;
+    }
+
+    .identificacao {
+        grid-template-columns: 1fr;
+    }
+
+    .linha {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .linha button {
+        width: 100%;
+        min-height: 44px;
+    }
+
+    .acoes {
+        flex-direction: column;
+    }
+
+    .acoes button,
+    .acoes .arquivo-botao {
+        width: 100%;
+        min-height: 48px;
+        justify-content: center;
+        box-sizing: border-box;
+    }
+
+    .camera {
+        width: 100%;
+        max-height: 60vh;
+        min-height: 200px;
+    }
+
+    .resumo,
+    .revisao-cabecalho {
+        flex-direction: column;
+    }
+
+    .btn-salvar {
+        position: fixed;
+        z-index: 20;
+        left: 12px;
+        right: 12px;
+        bottom: 12px;
+        width: calc(100% - 24px);
+        min-height: 52px;
+        box-shadow: 0 2px 12px rgb(0 0 0 / 18%);
+    }
+
+    .resultado-salvo .btn {
+        width: 100%;
+        min-height: 48px;
+    }
 }
 </style>

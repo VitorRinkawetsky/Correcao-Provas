@@ -116,6 +116,7 @@ onMounted(async () => {
     }
 });
 
+// Prova já aplicada: salvar apaga as versões geradas (o servidor devolve resetApplicationIds).
 const hasApplications = computed(() => Boolean(existingExam.value?.hasApplications));
 
 const handleSubmit = async () => {
@@ -123,12 +124,20 @@ const handleSubmit = async () => {
         titleError.value = true;
         return;
     }
+    if (formQuestions.value.length < 1) {
+        submitError.value = 'Adicione ao menos uma questao a prova.';
+        return;
+    }
     if (formQuestions.value.length > 20) {
         submitError.value = 'A prova pode possuir no maximo 20 questoes.';
         return;
     }
+    if (formQuestions.value.some((item) => !(Number(item.score) > 0))) {
+        submitError.value = 'A pontuacao de cada questao deve ser maior que zero.';
+        return;
+    }
 
-    // Prova com aplicações: as versões geradas serão apagadas, então o professor confirma antes.
+    // Só pergunta depois de a prova passar nas validações acima.
     if (isEditMode.value && hasApplications.value) {
         const confirmed = window.confirm(
             'Esta prova já tem aplicações. Ao salvar, as versões e os QR Codes gerados serão '
@@ -187,15 +196,13 @@ const cancelHref = computed(() => (isEditMode.value ? `/provas/${examId.value}` 
 
         <p v-if="loading" class="empty-state">Carregando dados da prova...</p>
         <p v-else-if="loadError" class="empty-state">{{ loadError }}</p>
-        <p
-            v-if="!loading && !loadError && isEditMode && hasApplications"
-            class="form-notice"
-            role="status"
-        >
-            Esta prova já tem aplicações. Ao salvar, as versões geradas serão apagadas
-            e você precisará gerá-las novamente.
-        </p>
+
         <form v-else class="exam-form" novalidate @submit.prevent="handleSubmit">
+            <p v-if="isEditMode && hasApplications" class="form-notice" role="status">
+                Esta prova já tem aplicações. Ao salvar, as versões geradas serão apagadas
+                e você precisará gerá-las novamente.
+            </p>
+
             <div class="form-field">
                 <label class="form-label" for="exam-title">Título</label>
                 <input

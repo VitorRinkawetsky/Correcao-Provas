@@ -1,5 +1,6 @@
 
 const service = require('../services/applicationVersionsService');
+const { buildVersionPdf } = require('../services/applicationVersionPdfService');
 
 async function getAnswerKey(request, response, next) {
     try {
@@ -63,22 +64,34 @@ async function listAssignments(request, response, next) {
     }
 }
 
-export async function downloadPdf(req, res, next) {
-  try {
-    const teacherId = req.session.teacherId;      // use o mesmo campo que as outras rotas usam
-    const pdf = await buildVersionPdf(Number(req.params.versionId), teacherId);
-    res.set({
-      'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename="prova-versao-${req.params.versionId}.pdf"`,
-      'Content-Length': pdf.length,
-    });
-    res.send(pdf);
-  } catch (e) { next(e); }
+async function downloadPdf(request, response, next) {
+    try {
+        const versionId = Number(request.params.versionId);
+
+        if (!Number.isSafeInteger(versionId) || versionId < 1) {
+            const error = new Error('Identificador de versão inválido.');
+            error.statusCode = 400;
+            throw error;
+        }
+
+        const pdf = await buildVersionPdf(versionId, request.teacher?.id);
+
+        response.set({
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': `attachment; filename="prova-versao-${versionId}.pdf"`,
+            'Content-Length': pdf.length
+        });
+
+        return response.send(pdf);
+    } catch (error) {
+        return next(error);
+    }
 }
 
 module.exports = {
     getAnswerKey,
     generate,
     list,
-    listAssignments
+    listAssignments,
+    downloadPdf
 };
