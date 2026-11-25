@@ -1,13 +1,14 @@
 
 <template>
-    <main class="reports-page">
-        <header class="page-header">
+    <section class="reports-page app-page">
+        <header class="app-page__heading">
             <div>
+                <p class="eyebrow">Sistema de Gestão de Provas</p>
                 <h1>Relatórios</h1>
-                <p>Desempenho dos estudantes com correções confirmadas.</p>
+                <p class="app-page__lead">Desempenho dos estudantes com correções confirmadas.</p>
             </div>
             <button
-                class="button primary"
+                class="button button--secondary"
                 :disabled="loading || students.length === 0"
                 @click="exportCsv"
             >
@@ -15,8 +16,8 @@
             </button>
         </header>
 
-        <section class="filters">
-            <label>
+        <section class="filters surface-card">
+            <label class="app-field">
                 Turma
                 <select v-model="filters.classId" @change="onClassChange">
                     <option value="">Todas as turmas</option>
@@ -26,7 +27,7 @@
                 </select>
             </label>
 
-            <label>
+            <label class="app-field">
                 Prova / aplicação
                 <select v-model="filters.applicationId">
                     <option value="">Todas as aplicações</option>
@@ -40,27 +41,27 @@
                 </select>
             </label>
 
-            <label>
+            <label class="app-field">
                 Data inicial
                 <input type="date" v-model="filters.startDate">
             </label>
 
-            <label>
+            <label class="app-field">
                 Data final
                 <input type="date" v-model="filters.endDate">
             </label>
 
             <div class="actions">
-                <button class="button primary" :disabled="loading" @click="loadReport">
+                <button class="button button--primary" :disabled="loading" @click="loadReport">
                     {{ loading ? 'Carregando...' : 'Aplicar filtros' }}
                 </button>
-                <button class="button secondary" :disabled="loading" @click="clearFilters">
+                <button class="button button--secondary" :disabled="loading" @click="clearFilters">
                     Limpar
                 </button>
             </div>
         </section>
 
-        <p v-if="errorMessage" class="error" role="alert">{{ errorMessage }}</p>
+        <p v-if="errorMessage" class="app-message app-message--error" role="alert">{{ errorMessage }}</p>
         <p v-if="loading">Carregando relatório...</p>
 
         <template v-else>
@@ -136,7 +137,7 @@
                 </div>
             </section>
         </template>
-    </main>
+    </section>
 </template>
 
 <script setup>
@@ -309,157 +310,78 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.reports-page {
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: 28px;
-    color: #1f2937;
-}
-
-.page-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 16px;
-    margin-bottom: 24px;
-}
-
-h1, h2, p {
-    margin-top: 0;
-}
-
-h1 {
-    margin-bottom: 8px;
-    font-size: 28px;
-}
-
-.page-header p {
-    color: #64748b;
-    margin-bottom: 0;
-}
-
 .filters {
-    display: grid;
     grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-    gap: 16px;
-    padding: 20px;
-    margin-bottom: 24px;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    background: #fff;
-}
-
-.filters label {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    font-size: 14px;
-    font-weight: 600;
-}
-
-.filters select, .filters input {
-    width: 100%;
-    min-height: 40px;
-    padding: 8px 10px;
-    border: 1px solid #cbd5e1;
-    border-radius: 7px;
-    background: #fff;
-    font: inherit;
+    gap: var(--space-4);
 }
 
 .actions {
     display: flex;
     align-items: end;
-    gap: 8px;
+    gap: var(--space-3);
     flex-wrap: wrap;
-}
-
-.button {
-    min-height: 40px;
-    padding: 9px 14px;
-    border: 0;
-    border-radius: 7px;
-    cursor: pointer;
-    font: inherit;
-    font-weight: 600;
-}
-
-.button:disabled {
-    cursor: not-allowed;
-    opacity: 0.5;
-}
-
-.primary {
-    color: #fff;
-    background: #2563eb;
-}
-
-.secondary {
-    color: #334155;
-    background: #e2e8f0;
 }
 
 .summary-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 16px;
-    margin-bottom: 24px;
+    gap: var(--space-4);
 }
 
-.summary-card, .report-section {
-    padding: 20px;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    background: #fff;
+.summary-card,
+.report-section {
+    padding: clamp(1.25rem, 3vw, 1.75rem);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-sm);
 }
 
 .summary-card {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: var(--space-2);
 }
 
 .summary-card span {
-    color: #64748b;
-    font-size: 13px;
+    color: var(--color-muted);
+    font-size: 0.82rem;
+    font-weight: 700;
 }
 
 .summary-card strong {
-    font-size: 26px;
-}
-
-.report-section {
-    margin-bottom: 24px;
+    color: var(--color-heading);
+    font-size: 1.7rem;
 }
 
 .report-section h2 {
-    margin-bottom: 20px;
-    font-size: 19px;
+    margin-bottom: var(--space-5);
+    font-size: clamp(1.15rem, 2.4vw, 1.35rem);
 }
 
 .distribution {
     display: grid;
-    gap: 14px;
+    gap: var(--space-3);
 }
 
 .distribution-row {
     display: grid;
     grid-template-columns: 65px 1fr 35px;
-    gap: 12px;
+    gap: var(--space-3);
     align-items: center;
 }
 
 .bar-track {
-    height: 13px;
+    height: 12px;
     overflow: hidden;
-    border-radius: 20px;
-    background: #e2e8f0;
+    border-radius: 999px;
+    background: var(--color-border-soft);
 }
 
 .bar {
     height: 100%;
-    border-radius: 20px;
-    background: #2563eb;
+    border-radius: 999px;
+    background: var(--color-brand-600);
     transition: width 0.2s ease;
 }
 
@@ -473,39 +395,22 @@ table {
     text-align: left;
 }
 
-th, td {
+th,
+td {
     padding: 13px 12px;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid var(--color-border);
     white-space: nowrap;
 }
 
 th {
-    color: #475569;
-    background: #f8fafc;
-    font-size: 13px;
-}
-
-.error {
-    padding: 14px;
-    border-radius: 8px;
-    color: #991b1b;
-    background: #fee2e2;
+    color: var(--color-muted);
+    background: var(--color-bg);
+    font-size: 0.8rem;
 }
 
 .empty {
-    padding: 24px;
-    color: #64748b;
+    padding: var(--space-6);
+    color: var(--color-muted);
     text-align: center;
-}
-
-@media (max-width: 600px) {
-    .reports-page {
-        padding: 16px;
-    }
-
-    .page-header {
-        align-items: flex-start;
-        flex-direction: column;
-    }
 }
 </style>

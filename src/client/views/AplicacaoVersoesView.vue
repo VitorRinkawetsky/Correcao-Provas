@@ -2,6 +2,7 @@
 import { computed, ref, onBeforeUnmount, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import QRCode from 'qrcode'
+import { ArrowLeft } from '@lucide/vue'
 
 import AnswerSheetPrint from '../components/AnswerSheetPrint.vue'
 import { reportUnauthorized } from '../services/apiClient'
@@ -284,21 +285,30 @@ onBeforeUnmount(limparModoImpressao)
   >
     <button
       type="button"
-      class="voltar"
+      class="back-link voltar"
       @click="voltarDetalhes"
     >
-      ← Voltar para aplicação
+      <ArrowLeft :size="16" />
+      Voltar para aplicação
     </button>
 
-    <h1>Versões da prova</h1>
+    <header class="app-page__heading cabecalho">
+      <div>
+        <p class="eyebrow">Aplicação</p>
+        <h1>Versões da prova</h1>
+        <p class="app-page__lead">
+          Consulte o gabarito, baixe o PDF e imprima o cartão-resposta de cada versão.
+        </p>
+      </div>
+    </header>
 
-    <p v-if="carregando">Carregando versões...</p>
+    <p v-if="carregando" class="empty-state">Carregando versões...</p>
 
-    <p v-else-if="erro" class="erro" role="alert">
+    <p v-else-if="erro" class="app-message app-message--error" role="alert">
       {{ erro }}
     </p>
 
-    <div v-else-if="versoes.length === 0" class="vazio">
+    <div v-else-if="versoes.length === 0" class="empty-state">
       Nenhuma versão foi gerada para esta aplicação.
     </div>
 
@@ -308,9 +318,8 @@ onBeforeUnmount(limparModoImpressao)
         :key="versao.id"
         class="cartao-versao"
       >
-        <div>
+        <div class="cartao-versao__info">
           <h2>Versão {{ versao.versionNumber }}</h2>
-          <p>ID: {{ versao.id }}</p>
           <p>
             Questões embaralhadas:
             {{ versao.shuffleQuestions ? 'Sim' : 'Não' }}
@@ -330,7 +339,7 @@ onBeforeUnmount(limparModoImpressao)
         <div class="cartao-versao__acoes">
           <button
             type="button"
-            class="botao"
+            class="button button--primary"
             :disabled="carregandoGabarito"
             @click="abrirGabarito(versao)"
           >
@@ -341,7 +350,7 @@ onBeforeUnmount(limparModoImpressao)
 
           <button
             type="button"
-            class="botao"
+            class="button button--primary"
             :disabled="baixandoPdf !== null"
             @click="baixarPdfVersao(versao)"
           >
@@ -351,7 +360,7 @@ onBeforeUnmount(limparModoImpressao)
       </article>
     </div>
 
-    <p v-if="erroPdf" class="erro" role="alert">
+    <p v-if="erroPdf" class="app-message app-message--error" role="alert">
       {{ erroPdf }}
     </p>
 
@@ -383,14 +392,14 @@ onBeforeUnmount(limparModoImpressao)
             <p>{{ item.detalhe }}</p>
             <button
               type="button"
-              class="botao botao--secundario"
+              class="button button--secondary"
               @click="copiarCodigo(item)"
             >
               {{ copiado === item.chave ? 'Código copiado' : 'Copiar código' }}
             </button>
             <button
               type="button"
-              class="botao botao--secundario"
+              class="button button--secondary"
               :disabled="carregandoCartao"
               @click="abrirCartao(item)"
             >
@@ -401,7 +410,7 @@ onBeforeUnmount(limparModoImpressao)
       </div>
     </section>
 
-    <p v-if="erroCartao" class="erro" role="alert">
+    <p v-if="erroCartao" class="app-message app-message--error" role="alert">
       {{ erroCartao }}
     </p>
 
@@ -412,7 +421,7 @@ onBeforeUnmount(limparModoImpressao)
     >
       <div class="cartao-impressao__acoes">
         <h2 id="cartao-titulo">Cartão-resposta pronto para imprimir</h2>
-        <button type="button" class="botao" @click="imprimirCartao">
+        <button type="button" class="button button--primary" @click="imprimirCartao">
           Imprimir / salvar PDF
         </button>
       </div>
@@ -439,7 +448,7 @@ onBeforeUnmount(limparModoImpressao)
         Carregando gabarito...
       </p>
 
-      <p v-else-if="erroGabarito" class="erro" role="alert">
+      <p v-else-if="erroGabarito" class="app-message app-message--error" role="alert">
         {{ erroGabarito }}
       </p>
 
@@ -463,7 +472,7 @@ onBeforeUnmount(limparModoImpressao)
         <button
           v-if="gabarito.length"
           type="button"
-          class="botao"
+          class="button button--primary"
           @click="imprimirGabarito"
         >
           Imprimir gabarito
@@ -475,141 +484,130 @@ onBeforeUnmount(limparModoImpressao)
 
 <style scoped>
 .pagina {
-  padding: 24px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(1.5rem, 4vw, 2.5rem);
 }
 
 .voltar {
-  margin-bottom: 20px;
-  border: 0;
+  padding: 0;
   background: transparent;
-  color: var(--color-primary, #0f5e56);
   cursor: pointer;
-  font: inherit;
-}
-
-h1 {
-  margin-bottom: 20px;
 }
 
 .lista-versoes {
   display: grid;
-  gap: 16px;
-  max-width: 900px;
+  gap: var(--space-4);
 }
 
 .cartao-versao {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 20px;
-  padding: 22px;
-  border: 1px solid var(--color-border, #d8e1df);
-  border-radius: 10px;
-  background: var(--color-surface, #fff);
+  gap: var(--space-5);
+  padding: clamp(1.25rem, 3vw, 1.75rem);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.cartao-versao__info {
+  display: grid;
+  gap: var(--space-1);
+  color: var(--color-muted);
+  font-size: 0.9rem;
 }
 
 .cartao-versao h2 {
-  margin: 0 0 12px;
-}
-
-.cartao-versao p {
-  margin: 8px 0;
+  margin-bottom: var(--space-2);
+  font-size: 1.2rem;
 }
 
 .cartao-versao__acoes {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-3);
 }
 
-.botao {
-  padding: 12px 20px;
-  border: 0;
-  border-radius: 7px;
-  background: var(--color-primary, #0f5e56);
-  color: white;
-  cursor: pointer;
-  font: inherit;
+.gabarito,
+.codigos,
+.cartao-impressao {
+  display: grid;
+  gap: var(--space-4);
+  padding: clamp(1.25rem, 3vw, 1.75rem);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
 }
 
-.botao:disabled {
-  opacity: 0.6;
-  cursor: wait;
+.gabarito h2,
+.codigos h2,
+.cartao-impressao h2 {
+  font-size: clamp(1.15rem, 2.4vw, 1.35rem);
 }
 
-.gabarito {
-  margin-top: 28px;
-  padding: 24px;
-  max-width: 900px;
-  border: 1px solid var(--color-border, #d8e1df);
-  border-radius: 10px;
-  background: var(--color-surface, #fff);
+.gabarito ol {
+  margin: 0;
+  padding-left: var(--space-5);
 }
 
 .gabarito li {
-  margin: 12px 0;
+  margin: var(--space-2) 0;
 }
 
-.codigos {
-  margin-top: 28px;
-  max-width: 900px;
+.gabarito .button {
+  justify-self: start;
 }
 
 .codigos__ajuda {
-  margin: 0 0 16px;
-  color: var(--color-muted, #5b6b69);
+  color: var(--color-muted);
 }
 
 .codigos__lista {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: var(--space-3);
 }
 
 .codigo {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 14px;
-  border: 1px solid var(--color-border, #d8e1df);
-  border-radius: 10px;
-  background: var(--color-surface, #fff);
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+}
+
+.codigo > div {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.codigo strong {
+  color: var(--color-heading);
 }
 
 .codigo p {
-  margin: 4px 0 10px;
-  font-size: 0.9rem;
+  color: var(--color-muted);
+  font-size: 0.86rem;
 }
 
-.botao--secundario {
-  padding: 8px 12px;
-  border: 1px solid var(--color-primary, #0f5e56);
-  background: transparent;
-  color: var(--color-primary, #0f5e56);
-  margin-right: 8px;
-}
-
-.cartao-impressao {
-  margin-top: 28px;
-  max-width: 900px;
+.codigo .button {
+  white-space: nowrap;
+  min-height: 38px;
+  padding: 0 var(--space-4);
+  font-size: 0.84rem;
 }
 
 .cartao-impressao__acoes {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 16px;
-}
-
-.erro {
-  color: #b91c1c;
-}
-
-.vazio {
-  padding: 20px;
-  border-radius: 8px;
-  background: var(--color-surface, #fff);
+  gap: var(--space-4);
 }
 
 @media (max-width: 600px) {
@@ -627,19 +625,23 @@ h1 {
 
   .pagina.imprimir-cartao,
   .pagina.imprimir-gabarito {
+    display: block;
     padding: 0;
   }
 
   .pagina.imprimir-cartao .cartao-impressao {
     max-width: none;
     margin: 0;
+    padding: 0;
+    border: 0;
+    box-shadow: none;
   }
 
   .pagina.imprimir-gabarito .voltar,
+  .pagina.imprimir-gabarito .cabecalho,
   .pagina.imprimir-gabarito .lista-versoes,
   .pagina.imprimir-gabarito .codigos,
   .pagina.imprimir-gabarito .cartao-impressao,
-  .pagina.imprimir-gabarito > h1,
   .pagina.imprimir-gabarito .gabarito button {
     display: none !important;
   }
@@ -647,6 +649,7 @@ h1 {
   .pagina.imprimir-gabarito .gabarito {
     max-width: none;
     border: 0;
+    box-shadow: none;
   }
 }
 </style>

@@ -1,6 +1,7 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { ArrowLeft } from '@lucide/vue';
 import {
     clearCanvas,
     detectQrCode,
@@ -459,12 +460,16 @@ onBeforeUnmount(() => {
 
 <template>
     <section class="pagina">
-        <button class="voltar" type="button" @click="goToApplication">
-            ← Voltar aos detalhes
+        <button class="back-link voltar" type="button" @click="goToApplication">
+            <ArrowLeft :size="16" />
+            Voltar aos detalhes
         </button>
 
         <div class="card">
-            <h1>Corrigir prova</h1>
+            <div>
+                <p class="eyebrow">Correção</p>
+                <h1>Corrigir prova</h1>
+            </div>
             <p class="subtitulo">
                 {{ isPersistedCorrection
                     ? 'Revise as respostas e ajuste a correção salva.'
@@ -472,10 +477,10 @@ onBeforeUnmount(() => {
             </p>
 
             <div v-if="applicationId" class="atalhos-correcao">
-                <button class="btn btn-secondary" type="button" @click="goToCorrectionList">
+                <button class="button button--secondary" type="button" @click="goToCorrectionList">
                     Histórico de correções
                 </button>
-                <button class="btn btn-secondary" type="button" @click="goToPendingCorrections">
+                <button class="button button--secondary" type="button" @click="goToPendingCorrections">
                     Correções sem aluno
                 </button>
             </div>
@@ -492,7 +497,7 @@ onBeforeUnmount(() => {
 
             <div v-if="!isPersistedCorrection" class="acoes">
                 <button
-                    class="btn btn-primary btn-camera"
+                    class="button button--primary btn-camera"
                     type="button"
                     :disabled="scanning || loading || processingImage"
                     @click="startScanner"
@@ -502,7 +507,7 @@ onBeforeUnmount(() => {
 
                 <button
                     v-if="scanning"
-                    class="btn btn-primary"
+                    class="button button--primary"
                     type="button"
                     :disabled="processingImage"
                     @click="captureCard"
@@ -512,14 +517,14 @@ onBeforeUnmount(() => {
 
                 <button
                     v-if="scanning"
-                    class="btn btn-secondary"
+                    class="button button--secondary"
                     type="button"
                     @click="stopScanner"
                 >
                     Parar câmera
                 </button>
 
-                <label class="btn btn-secondary arquivo-botao" :class="{ desabilitado: processingImage }">
+                <label class="button button--secondary arquivo-botao" :class="{ desabilitado: processingImage }">
                     {{ processingImage ? 'Processando foto...' : 'Enviar foto do cartão' }}
                     <input
                         class="arquivo-input"
@@ -550,7 +555,7 @@ onBeforeUnmount(() => {
                         placeholder="Cole o código do QR Code"
                         autocomplete="off"
                     >
-                    <button class="btn btn-secondary" type="submit" :disabled="loading">
+                    <button class="button button--secondary" type="submit" :disabled="loading">
                         Buscar
                     </button>
                 </div>
@@ -588,7 +593,7 @@ onBeforeUnmount(() => {
                     Nota: {{ Number(savedScore).toFixed(2) }}
                 </strong>
                 <p>{{ message }}</p>
-                <button class="btn btn-primary" type="button" @click="correctAnotherExam">
+                <button class="button button--primary" type="button" @click="correctAnotherExam">
                     Corrigir outra prova
                 </button>
             </section>
@@ -681,7 +686,7 @@ onBeforeUnmount(() => {
                 </div>
 
                 <button
-                    class="btn btn-primary btn-salvar"
+                    class="button button--primary btn-salvar"
                     type="submit"
                     :disabled="loading || processingImage"
                 >
@@ -698,38 +703,41 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .pagina {
+    display: grid;
     width: 100%;
     max-width: 100%;
-    padding: 24px;
+    gap: var(--space-5);
     box-sizing: border-box;
     overflow-x: hidden;
 }
 
 .voltar {
-    border: 0;
-    background: none;
-    color: var(--color-primary, #0f5e56);
-    cursor: pointer;
-    margin-bottom: 16px;
-    font-size: 1rem;
     min-height: 44px;
+    padding: 0;
+    background: none;
+    cursor: pointer;
 }
 
 .card {
     width: 100%;
     max-width: 900px;
-    margin: 0 auto;
     box-sizing: border-box;
-    background: var(--color-surface, #fff);
-    border-radius: var(--radius-md, 8px);
-    padding: 24px;
+    padding: clamp(1.25rem, 4vw, 2.25rem);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-sm);
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: var(--space-5);
+}
+
+.card h1 {
+    margin-top: var(--space-2);
 }
 
 .subtitulo {
-    color: var(--color-text-muted, #6b7280);
+    color: var(--color-muted);
 }
 
 .atalhos-correcao,
@@ -774,7 +782,7 @@ onBeforeUnmount(() => {
 
 .privacidade {
     margin: -6px 0 0;
-    color: var(--color-text-muted, #6b7280);
+    color: var(--color-muted);
     font-size: 0.88rem;
 }
 
@@ -795,10 +803,25 @@ onBeforeUnmount(() => {
     width: 100%;
     min-width: 0;
     box-sizing: border-box;
-    padding: 12px;
-    border: 1px solid var(--color-border, #e5e7eb);
-    border-radius: 6px;
+    min-height: 44px;
+    padding: 0 var(--space-4);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
     font: inherit;
+}
+
+.codigo-form input:focus,
+.identificacao input:focus {
+    border-color: var(--color-brand-500);
+    outline: 0;
+    box-shadow: 0 0 0 4px rgba(35, 165, 143, 0.14);
+}
+
+.codigo-form > label,
+.identificacao label {
+    color: var(--color-heading);
+    font-size: 0.9rem;
+    font-weight: 700;
 }
 
 .linha {
@@ -859,10 +882,11 @@ onBeforeUnmount(() => {
     flex: 0 0 auto;
     width: 18px;
     height: 18px;
+    accent-color: var(--color-brand-700);
 }
 
 .alternativa:has(input:checked) {
-    background: #e8f5f2;
+    background: var(--color-brand-50);
 }
 
 .resumo {
@@ -870,14 +894,14 @@ onBeforeUnmount(() => {
     flex-wrap: wrap;
     justify-content: space-between;
     gap: 12px;
-    padding: 12px;
-    background: #f3f4f6;
-    border-radius: 6px;
+    padding: var(--space-3) var(--space-4);
+    background: var(--color-bg);
+    border-radius: var(--radius-md);
 }
 
 .pontuacao,
 .resultado-questao {
-    color: var(--color-text-muted, #6b7280);
+    color: var(--color-muted);
     font-size: 0.9rem;
 }
 
@@ -973,44 +997,44 @@ onBeforeUnmount(() => {
 }
 
 .mensagem {
-    padding: 10px 12px;
-    border-radius: 6px;
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-md);
 }
 
 .erro {
-    color: #b91c1c;
-    background: #fee2e2;
+    color: var(--color-danger-text);
+    background: var(--color-danger-bg);
 }
 
 .sucesso {
-    color: #166534;
-    background: #dcfce7;
+    color: var(--color-brand-800);
+    background: var(--color-brand-50);
 }
 
 .carregando {
-    color: var(--color-text-muted, #6b7280);
+    color: var(--color-muted);
 }
 
 .resultado-salvo {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: 10px;
-    padding: 20px;
-    border: 1px solid #b7dfd2;
-    border-radius: 10px;
-    background: #effaf5;
+    gap: var(--space-3);
+    padding: var(--space-5);
+    border: 1px solid var(--color-brand-100);
+    border-radius: var(--radius-lg);
+    background: var(--color-brand-50);
 }
 
 .resultado-label {
     margin: 0;
-    font-weight: 600;
-    color: #166534;
+    font-weight: 700;
+    color: var(--color-brand-800);
 }
 
 .resultado-nota {
     font-size: 2rem;
-    color: #0f5e56;
+    color: var(--color-brand-700);
 }
 
 .btn-salvar {
@@ -1019,7 +1043,6 @@ onBeforeUnmount(() => {
 
 @media (max-width: 640px) {
     .pagina {
-        padding: 12px;
         padding-bottom: 90px;
     }
 
@@ -1076,7 +1099,7 @@ onBeforeUnmount(() => {
         box-shadow: 0 2px 12px rgb(0 0 0 / 18%);
     }
 
-    .resultado-salvo .btn {
+    .resultado-salvo .button {
         width: 100%;
         min-height: 48px;
     }

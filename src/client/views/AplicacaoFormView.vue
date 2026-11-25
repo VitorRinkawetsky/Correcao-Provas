@@ -2,6 +2,7 @@
 <script setup>
 import { ref, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { ArrowLeft, FilePlus2 } from '@lucide/vue'
 import { listExams } from '../services/examApi'
 import { getClasses } from '../services/classApi'
 import { createApplication } from '../services/applicationApi'
@@ -143,26 +144,28 @@ async function gerarProva() {
 </script>
 
 <template>
-  <section class="pagina">
-    <router-link
-      :to="{ name: 'applications' }"
-      class="voltar"
-    >
-      ← Voltar
+  <section class="app-page">
+    <router-link :to="{ name: 'applications' }" class="back-link">
+      <ArrowLeft :size="16" />
+      Voltar para aplicações
     </router-link>
 
-    <form class="formulario" @submit.prevent="gerarProva">
-      <h1>Gerar prova</h1>
+    <header class="app-page__heading">
+      <div>
+        <p class="eyebrow">Aplicação</p>
+        <h1>Gerar prova</h1>
+        <p class="app-page__lead">
+          Configure a aplicação e as versões da prova em uma única etapa.
+        </p>
+      </div>
+    </header>
 
-      <p class="descricao">
-        Configure a aplicação e as versões da prova em uma única etapa.
-      </p>
+    <p v-if="carregando" class="empty-state">Carregando provas e turmas...</p>
 
-      <p v-if="carregando">Carregando provas e turmas...</p>
-
-      <template v-else>
-        <div class="campo">
-          <label for="prova">Prova</label>
+    <form v-else class="surface-card formulario" @submit.prevent="gerarProva">
+      <div class="grade-campos">
+        <label class="app-field" for="prova">
+          Prova
           <select
             id="prova"
             v-model="provaSelecionada"
@@ -178,10 +181,10 @@ async function gerarProva() {
               {{ prova.title }}
             </option>
           </select>
-        </div>
+        </label>
 
-        <div class="campo">
-          <label for="turma">Turma</label>
+        <label class="app-field" for="turma">
+          Turma
           <select
             id="turma"
             v-model="turmaSelecionada"
@@ -197,10 +200,10 @@ async function gerarProva() {
               {{ turma.name }}
             </option>
           </select>
-        </div>
+        </label>
 
-        <div class="campo">
-          <label for="qtd-versoes">Quantidade de versões</label>
+        <label class="app-field" for="qtd-versoes">
+          Quantidade de versões
           <input
             id="qtd-versoes"
             v-model.number="quantidadeVersoes"
@@ -211,11 +214,13 @@ async function gerarProva() {
             :disabled="enviando"
           />
           <small>Escolha entre 1 e 50 versões.</small>
-        </div>
+        </label>
+      </div>
 
-        <section class="configuracoes">
-          <h2>Configuração das versões</h2>
+      <section class="secao">
+        <h2>Configuração das versões</h2>
 
+        <div class="versoes">
           <div
             v-for="(versao, index) in versoes"
             :key="index"
@@ -223,7 +228,7 @@ async function gerarProva() {
           >
             <h3>Versão {{ index + 1 }}</h3>
 
-            <label class="opcao">
+            <label class="app-check">
               <input
                 v-model="versao.embaralharQuestoes"
                 type="checkbox"
@@ -232,7 +237,7 @@ async function gerarProva() {
               Embaralhar questões
             </label>
 
-            <label class="opcao">
+            <label class="app-check">
               <input
                 v-model="versao.embaralharAlternativas"
                 type="checkbox"
@@ -241,12 +246,14 @@ async function gerarProva() {
               Embaralhar alternativas
             </label>
           </div>
-        </section>
+        </div>
+      </section>
 
-        <section class="campo identificacao">
-          <h2>Identificação dos alunos</h2>
+      <section class="secao">
+        <h2>Identificação dos alunos</h2>
 
-          <label class="opcao">
+        <div class="button-row">
+          <label class="app-check">
             <input
               v-model="identificacao"
               type="radio"
@@ -256,7 +263,7 @@ async function gerarProva() {
             Com identificação
           </label>
 
-          <label class="opcao">
+          <label class="app-check">
             <input
               v-model="identificacao"
               type="radio"
@@ -265,170 +272,82 @@ async function gerarProva() {
             />
             Sem identificação
           </label>
-        </section>
+        </div>
+      </section>
 
-        <p
-          v-if="!provas.length || !turmas.length"
-          class="mensagem-erro"
-          role="alert"
-        >
-          Não há provas ou turmas ativas disponíveis.
-        </p>
+      <p
+        v-if="!provas.length || !turmas.length"
+        class="app-message app-message--error"
+        role="alert"
+      >
+        Não há provas ou turmas ativas disponíveis.
+      </p>
 
-        <p v-if="erro" class="mensagem-erro" role="alert">
-          {{ erro }}
-        </p>
+      <p v-if="erro" class="app-message app-message--error" role="alert">
+        {{ erro }}
+      </p>
 
+      <p v-if="aplicacaoId" class="app-message">
+        A aplicação já foi criada. Uma nova tentativa não criará
+        outra aplicação.
+      </p>
+
+      <div class="button-row">
         <button
           type="submit"
-          class="btn-gerar"
+          class="button button--primary"
           :disabled="
             enviando ||
             !provas.length ||
             !turmas.length
           "
         >
+          <FilePlus2 :size="17" />
           {{ enviando ? 'Gerando prova...' : 'Gerar prova' }}
         </button>
-
-        <p v-if="aplicacaoId" class="aviso">
-          A aplicação já foi criada. Uma nova tentativa não criará
-          outra aplicação.
-        </p>
-      </template>
+      </div>
     </form>
   </section>
 </template>
 
 <style scoped>
-.pagina {
-  padding: 24px;
-}
-
-.voltar {
-  display: inline-block;
-  margin-bottom: 20px;
-  color: var(--color-primary, #0f5e56);
-  text-decoration: none;
-}
-
 .formulario {
-  max-width: 600px;
-  margin: 0 auto;
-  padding: 28px;
-  background: var(--color-surface, #fff);
-  border-radius: var(--radius-md, 12px);
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+  max-width: 820px;
+  gap: var(--space-6);
 }
 
-.formulario h1 {
-  margin: 0;
+.grade-campos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-5);
 }
 
-.descricao {
-  margin: -10px 0 0;
-  color: #666;
+.secao {
+  display: grid;
+  gap: var(--space-3);
 }
 
-.campo {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.campo label,
-.campo h2 {
-  font-weight: 600;
-}
-
-.campo h2 {
-  margin: 0 0 8px;
+.secao h2 {
   font-size: 1.05rem;
 }
 
-.campo select,
-.campo input[type="number"] {
-  width: 100%;
-  padding: 12px;
-  border: 1px solid var(--color-border, #d1d5db);
-  border-radius: 8px;
-  background: white;
-  font: inherit;
-}
-
-.campo small {
-  color: #666;
-}
-
-.configuracoes {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.configuracoes h2 {
-  margin: 0;
-  font-size: 1.1rem;
+.versoes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--space-3);
 }
 
 .versao-bloco {
-  padding: 16px;
-  border: 1px solid var(--color-border, #d1d5db);
-  border-radius: 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
 }
 
 .versao-bloco h3 {
-  margin: 0;
-  color: var(--color-primary, #0f5e56);
-}
-
-.opcao {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  cursor: pointer;
-}
-
-.opcao input {
-  width: 18px;
-  height: 18px;
-}
-
-.identificacao {
-  padding-top: 8px;
-}
-
-.btn-gerar {
-  width: 100%;
-  min-height: 48px;
-  padding: 12px;
-  border: 0;
-  border-radius: 8px;
-  background: var(--color-primary, #0f5e56);
-  color: white;
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.btn-gerar:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
-.mensagem-erro {
-  color: #b42318;
-  font-weight: 500;
-}
-
-.aviso {
-  margin: 0;
-  color: #666;
-  font-size: 0.9rem;
+  color: var(--color-brand-700);
+  font-size: 0.95rem;
 }
 </style>

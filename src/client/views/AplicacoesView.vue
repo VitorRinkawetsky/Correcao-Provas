@@ -2,6 +2,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { ArrowRight, Plus } from '@lucide/vue'
 import StatusBadge from '../components/ui/StatusBadge.vue'
 import { requestJson } from '../services/apiClient'
 
@@ -44,144 +45,57 @@ function abrirAplicacao(id) {
 </script>
 
 <template>
-  <section class="pagina">
-    <div class="topo">
-      <h1>Aplicações</h1>
-      <button class="btn btn-primary" @click="novaAplicacao">
-        + Nova aplicação
+  <section class="app-page">
+    <header class="app-page__heading">
+      <div>
+        <p class="eyebrow">Sistema de Gestão de Provas</p>
+        <h1>Aplicações</h1>
+      </div>
+      <button class="button button--primary" type="button" @click="novaAplicacao">
+        <Plus :size="18" />
+        Nova aplicação
       </button>
-    </div>
+    </header>
 
-    <p v-if="carregando" class="mensagem">
+    <p v-if="carregando" class="empty-state">
       Carregando aplicações...
     </p>
 
-    <div v-else-if="erro" class="mensagem erro" role="alert">
+    <div v-else-if="erro" class="app-message app-message--error button-row" role="alert">
       <p>{{ erro }}</p>
-      <button class="btn btn-secondary" @click="carregarAplicacoes">
+      <button class="button button--secondary" type="button" @click="carregarAplicacoes">
         Tentar novamente
       </button>
     </div>
 
-    <p v-else-if="aplicacoes.length === 0" class="mensagem">
-      Nenhuma aplicação cadastrada.
+    <p v-else-if="aplicacoes.length === 0" class="empty-state">
+      Nenhuma aplicação cadastrada. Use "Nova aplicação" para criar a primeira.
     </p>
 
-    <div v-else class="lista">
-      <div
+    <ul v-else class="exam-list">
+      <li
         v-for="ap in aplicacoes"
         :key="ap.id"
-        class="aplicacao-card"
+        class="exam-list-card"
       >
-        <div class="aplicacao-info">
-          <p class="aplicacao-titulo">{{ ap.prova }}</p>
-
-          <p class="aplicacao-turma">
-            Turma: {{ ap.turma }}
-          </p>
-
-          <div class="aplicacao-status">
-            <span>Status:</span>
+        <div class="exam-list-card__content">
+          <strong>{{ ap.prova }}</strong>
+          <span>Turma: {{ ap.turma }}</span>
+          <span class="exam-list-card__status">
+            Status:
             <StatusBadge :status="ap.status" />
-          </div>
-
-          <p class="aplicacao-progresso">
-            ID da aplicação: {{ ap.id }}
-          </p>
+          </span>
         </div>
 
         <button
-          class="btn btn-secondary"
+          class="button button--secondary"
+          type="button"
           @click="abrirAplicacao(ap.id)"
         >
           Abrir
+          <ArrowRight :size="17" />
         </button>
-      </div>
-    </div>
+      </li>
+    </ul>
   </section>
 </template>
-
-<style scoped>
-.pagina {
-  padding: 24px;
-}
-
-.topo {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 20px;
-}
-
-.topo h1 {
-  margin: 0;
-}
-
-.lista {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.aplicacao-card {
-  background: var(--color-surface, #fff);
-  border-radius: var(--radius-md, 8px);
-  padding: 16px 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  border: 1px solid var(--color-border, #e5e7eb);
-}
-
-.aplicacao-info {
-  min-width: 0;
-}
-
-.aplicacao-titulo {
-  font-weight: 600;
-  color: var(--color-primary, #0f5e56);
-  margin: 0 0 8px;
-}
-
-.aplicacao-turma {
-  color: var(--color-text-muted, #6b7280);
-  font-size: 0.9rem;
-  margin: 0 0 8px;
-}
-
-.aplicacao-status {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 4px;
-  font-size: 0.9rem;
-}
-
-.aplicacao-progresso {
-  font-size: 0.9rem;
-  margin: 8px 0 0;
-  color: var(--color-text-muted, #6b7280);
-}
-
-.mensagem {
-  padding: 16px 0;
-}
-
-.erro {
-  color: #b42318;
-}
-
-@media (max-width: 600px) {
-  .topo {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .aplicacao-card {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-}
-</style>

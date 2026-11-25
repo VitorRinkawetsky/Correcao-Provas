@@ -1992,3 +1992,158 @@ h2 {
     background: #fff8e6;
     color: #7a5200;
 }
+
+/* ---------- Telas de aplicação, correção e relatórios (mesmo padrão visual das demais) ---------- */
+
+.app-page {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: clamp(1.5rem, 4vw, 2.5rem);
+}
+
+.app-page__heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--space-4);
+}
+
+.app-page__heading h1 {
+    margin-top: var(--space-2);
+}
+
+.app-page__lead {
+    margin-top: var(--space-3);
+    color: var(--color-muted);
+}
+
+.surface-card {
+    display: grid;
+    gap: var(--space-5);
+    padding: clamp(1.25rem, 3vw, 1.75rem);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-sm);
+}
+
+.surface-card h2 {
+    font-size: clamp(1.15rem, 2.4vw, 1.35rem);
+}
+
+.button-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-3);
+}
+
+.app-field {
+    display: grid;
+    gap: var(--space-2);
+    color: var(--color-heading);
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.app-field input:not([type="checkbox"]):not([type="radio"]),
+.app-field select,
+.app-field textarea {
+    width: 100%;
+    min-height: 44px;
+    padding: 0 var(--space-4);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    color: var(--color-text);
+    background: var(--color-surface);
+    font-weight: 400;
+    transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.app-field textarea {
+    padding: var(--space-3) var(--space-4);
+}
+
+.app-field input:focus,
+.app-field select:focus,
+.app-field textarea:focus {
+    border-color: var(--color-brand-500);
+    outline: 0;
+    box-shadow: 0 0 0 4px rgba(35, 165, 143, 0.14);
+}
+
+.app-field small {
+    color: var(--color-muted);
+    font-size: 0.8rem;
+    font-weight: 400;
+}
+
+.app-check {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    color: var(--color-text);
+    font-size: 0.92rem;
+    cursor: pointer;
+}
+
+.app-check input {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--color-brand-700);
+}
+
+.app-message {
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-md);
+    color: var(--color-muted);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+}
+
+.app-message--error {
+    border-color: transparent;
+    color: var(--color-danger-text);
+    background: var(--color-danger-bg);
+}
+
+.app-message--success {
+    border-color: transparent;
+    color: var(--color-brand-800);
+    background: var(--color-brand-50);
+}
+
+.info-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: var(--space-4);
+}
+
+.info-list div {
+    display: grid;
+    gap: var(--space-1);
+    padding: var(--space-4);
+    border-radius: var(--radius-md);
+    background: var(--color-bg);
+}
+
+.info-list dt {
+    color: var(--color-muted);
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.info-list dd {
+    color: var(--color-heading);
+    font-weight: 700;
+}
+
+.empty-state {
+    padding: clamp(1.5rem, 4vw, 2.5rem);
+    border: 1px dashed var(--color-border);
+    border-radius: var(--radius-lg);
+    color: var(--color-muted);
+    background: var(--color-surface);
+    text-align: center;
+}

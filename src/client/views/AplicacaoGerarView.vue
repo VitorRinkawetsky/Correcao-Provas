@@ -2,6 +2,7 @@
 <script setup>
 import { ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { ArrowLeft } from '@lucide/vue'
 import { requestJson } from '../services/apiClient'
 
 const route = useRoute()
@@ -85,97 +86,106 @@ function verVersoes() {
 </script>
 
 <template>
-  <section class="pagina">
-    <router-link
-      :to="{ name: 'applications' }"
-      class="voltar"
-    >
-      ← Voltar
+  <section class="app-page">
+    <router-link :to="{ name: 'applications' }" class="back-link">
+      <ArrowLeft :size="16" />
+      Voltar para aplicações
     </router-link>
 
-    <div class="card">
-      <h1>Gerar aplicação da prova</h1>
+    <header class="app-page__heading">
+      <div>
+        <p class="eyebrow">Aplicação</p>
+        <h1>Gerar versões da prova</h1>
+        <p class="app-page__lead">
+          Defina quantas versões serão impressas e como cada uma será embaralhada.
+        </p>
+      </div>
+    </header>
 
-      <div class="campo">
-        <label for="qtd-versoes">Quantidade de versões</label>
-
+    <div class="surface-card formulario">
+      <label class="app-field quantidade" for="qtd-versoes">
+        Quantidade de versões
         <input
           id="qtd-versoes"
           v-model.number="quantidadeVersoes"
           type="number"
           min="1"
           max="50"
-          class="input-numero"
           :disabled="carregando"
         />
+      </label>
+
+      <div class="versoes">
+        <div
+          v-for="(versao, index) in versoes"
+          :key="index"
+          class="versao-bloco"
+        >
+          <h3>Versão {{ index + 1 }}</h3>
+
+          <label class="app-check">
+            <input
+              v-model="versao.embaralharQuestoes"
+              type="checkbox"
+              :disabled="carregando"
+            />
+            Embaralhar questões
+          </label>
+
+          <label class="app-check">
+            <input
+              v-model="versao.embaralharAlternativas"
+              type="checkbox"
+              :disabled="carregando"
+            />
+            Embaralhar alternativas
+          </label>
+        </div>
       </div>
 
-      <div
-        v-for="(versao, index) in versoes"
-        :key="index"
-        class="versao-bloco"
-      >
-        <p class="versao-titulo">
-          Versão {{ index + 1 }}
-        </p>
+      <section class="secao">
+        <h2>Identificação dos alunos</h2>
 
-        <label class="checkbox-linha">
-          <input
-            v-model="versao.embaralharQuestoes"
-            type="checkbox"
-            :disabled="carregando"
-          />
-          Embaralhar questões
-        </label>
+        <div class="button-row">
+          <label class="app-check">
+            <input
+              v-model="identificacao"
+              type="radio"
+              value="com"
+              :disabled="carregando"
+            />
+            Com identificação
+          </label>
 
-        <label class="checkbox-linha">
-          <input
-            v-model="versao.embaralharAlternativas"
-            type="checkbox"
-            :disabled="carregando"
-          />
-          Embaralhar alternativas
-        </label>
-      </div>
+          <label class="app-check">
+            <input
+              v-model="identificacao"
+              type="radio"
+              value="sem"
+              :disabled="carregando"
+            />
+            Sem identificação
+          </label>
+        </div>
+      </section>
 
-      <div class="campo">
-        <p class="versao-titulo">Identificação</p>
-
-        <label class="radio-linha">
-          <input
-            v-model="identificacao"
-            type="radio"
-            value="com"
-            :disabled="carregando"
-          />
-          Com identificação
-        </label>
-
-        <label class="radio-linha">
-          <input
-            v-model="identificacao"
-            type="radio"
-            value="sem"
-            :disabled="carregando"
-          />
-          Sem identificação
-        </label>
-      </div>
-
-      <p v-if="erro" class="mensagem-erro" role="alert">
+      <p v-if="erro" class="app-message app-message--error" role="alert">
         {{ erro }}
       </p>
 
-      <button
-        class="btn btn-primary"
-        :disabled="carregando"
-        @click="gerarProva"
-      >
-        {{ carregando ? 'Gerando versões...' : 'Gerar prova' }}
-      </button>
+      <div class="button-row">
+        <button
+          class="button button--primary"
+          type="button"
+          :disabled="carregando"
+          @click="gerarProva"
+        >
+          {{ carregando ? 'Gerando versões...' : 'Gerar versões' }}
+        </button>
+      </div>
 
-      <div v-if="provaGerada" class="sucesso-bloco">
-        <p class="mensagem-sucesso">
+      <div v-if="provaGerada" class="app-message app-message--success sucesso-bloco">
+        <p>
           {{ versoesGeradas.length }} versão(ões) gerada(s) e salva(s) com sucesso.
         </p>
 
@@ -184,90 +194,70 @@ function verVersoes() {
             v-for="versao in versoesGeradas"
             :key="versao.id"
           >
-            Versão {{ versao.versionNumber }} — ID {{ versao.id }}
+            Versão {{ versao.versionNumber }}
           </li>
         </ul>
 
-        <button
-          class="btn btn-secondary"
-          @click="verVersoes"
-        >
-          Ver versões geradas
-        </button>
+        <div class="button-row">
+          <button
+            class="button button--secondary"
+            type="button"
+            @click="verVersoes"
+          >
+            Ver versões geradas
+          </button>
+        </div>
       </div>
     </div>
   </section>
 </template>
 
 <style scoped>
-.pagina {
-  padding: 24px;
+.formulario {
+  max-width: 820px;
+  gap: var(--space-6);
 }
 
-.voltar {
-  display: inline-block;
-  margin-bottom: 16px;
-  color: var(--color-primary, #0f5e56);
-  text-decoration: none;
+.quantidade {
+  max-width: 220px;
 }
 
-.card {
-  background: var(--color-surface, #fff);
-  border-radius: var(--radius-md, 8px);
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  max-width: 480px;
+.secao {
+  display: grid;
+  gap: var(--space-3);
 }
 
-.campo {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+.secao h2 {
+  font-size: 1.05rem;
 }
 
-.input-numero {
-  width: 80px;
-  padding: 8px;
-  border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: var(--radius-sm, 6px);
+.versoes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--space-3);
 }
 
 .versao-bloco {
-  border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: var(--radius-sm, 6px);
-  padding: 12px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
 }
 
-.versao-titulo {
-  font-weight: 600;
-  color: var(--color-primary, #0f5e56);
-}
-
-.checkbox-linha,
-.radio-linha {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.versao-bloco h3 {
+  color: var(--color-brand-700);
+  font-size: 0.95rem;
 }
 
 .sucesso-bloco {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  display: grid;
+  gap: var(--space-3);
 }
 
-.mensagem-sucesso {
-  color: var(--color-success, #15803d);
-  font-weight: 500;
-}
-
-.mensagem-erro {
-  color: #b91c1c;
-  font-weight: 500;
+.sucesso-bloco ul {
+  margin: 0;
+  padding-left: var(--space-5);
 }
 </style>
