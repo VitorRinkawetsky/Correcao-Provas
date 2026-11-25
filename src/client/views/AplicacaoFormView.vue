@@ -37,9 +37,12 @@ const versoes = ref([
   versaoPadrao(),
 ])
 
+// Enquanto o professor digita, o campo pode ficar vazio (ex.: apagar o 3 para digitar 2).
+// Só ajusta a lista quando há um número válido; o campo é normalizado ao sair dele.
 watch(quantidadeVersoes, (valor) => {
-  const nova = Math.min(50, Math.max(1, Number(valor) || 1))
-  if (nova !== valor) quantidadeVersoes.value = nova
+  if (valor === '' || valor === null || !Number.isFinite(Number(valor))) return
+
+  const nova = Math.min(50, Math.max(1, Math.round(Number(valor))))
 
   while (versoes.value.length < nova) {
     versoes.value.push(versaoPadrao())
@@ -49,6 +52,10 @@ watch(quantidadeVersoes, (valor) => {
     versoes.value.splice(nova)
   }
 })
+
+function normalizarQuantidade() {
+  quantidadeVersoes.value = versoes.value.length
+}
 
 onMounted(async () => {
   try {
@@ -208,6 +215,7 @@ async function gerarProva() {
             id="qtd-versoes"
             v-model.number="quantidadeVersoes"
             type="number"
+            @blur="normalizarQuantidade"
             min="1"
             max="50"
             required
