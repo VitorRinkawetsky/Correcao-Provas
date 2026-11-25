@@ -10,7 +10,7 @@ Plataforma acadêmica para criação, aplicação e correção de provas, operad
 💻 **Código-fonte:** [github.com/VitorRinkawetsky/Correcao-Provas](https://github.com/VitorRinkawetsky/Correcao-Provas)
 
 ![Status](https://img.shields.io/badge/status-em%20desenvolvimento-f0ad4e)
-![Entrega](https://img.shields.io/badge/entrega-N2-0b6e69)
+![Entrega](https://img.shields.io/badge/entrega-N3-0b6e69)
 ![Vue](https://img.shields.io/badge/Vue.js-3-42b883)
 ![Vite](https://img.shields.io/badge/Vite-8-646cff)
 ![Node.js](https://img.shields.io/badge/Node.js-20.19%2B-339933)
@@ -22,13 +22,13 @@ Plataforma acadêmica para criação, aplicação e correção de provas, operad
 
 ## 👥 Equipe
 
-| Integrante | Atuação nesta entrega |
+| Integrante | Atuação na N3 |
 |---|---|
-| Vitor Rinkawetsky | Configuração do projeto, integração das telas e revisão do front-end |
-| Weliton Rodrigues | Fluxos de provas e tela de detalhes da avaliação |
-| Laura Donath | Fluxos de aplicações, versões e atalhos da página inicial |
-| Ana Clara Tomaselli Borchardt | Banco e formulário de questões objetivas |
-| Gustavo Gorges Koch | Fluxos de turmas e estudantes |
+| Vitor Rinkawetsky | Coordenação, revisão das branches, padronização visual das telas, leitura do QR em qualquer navegador e hospedagem |
+| Gustavo Gorges Koch | Correção automática: leitura das respostas marcadas no cartão pela câmera ou por foto e cartão-resposta para impressão |
+| Ana Clara Tomaselli Borchardt | PDF da prova (caderno de questões e cartão-resposta com QR) e edição de prova já aplicada |
+| Weliton Rodrigues | Status automático da aplicação e da prova após as correções e validações de casos de borda |
+| Laura Donath | Geração da prova em uma única etapa e tela de correção adaptada ao celular |
 
 ---
 
@@ -38,6 +38,7 @@ Plataforma acadêmica para criação, aplicação e correção de provas, operad
 - [2. Requisitos](#2-requisitos)
   - [2.1 Requisitos Funcionais](#21-requisitos-funcionais)
   - [2.2 Requisitos Não Funcionais](#22-requisitos-não-funcionais)
+- [3. Entrega N3](#3-entrega-n3)
 - [4. Telas do Sistema](#4-telas-do-sistema)
 - [5. Arquitetura e Diagramas UML](#5-arquitetura-e-diagramas-uml)
 - [6. Decisões Arquiteturais](#6-decisões-arquiteturais)
@@ -54,6 +55,8 @@ Plataforma acadêmica para criação, aplicação e correção de provas, operad
 O **SGP Católica** é um projeto acadêmico criado para apoiar o ciclo de avaliações da instituição. A proposta é reduzir o trabalho manual dos professores por meio de um ambiente único para organizar questões, montar provas, gerar aplicações e acompanhar correções.
 
 Na **N1**, o repositório passou a apresentar um protótipo navegável em Vue.js, abastecido por dados simulados. Na **N2**, todas as telas passaram a ler e gravar em um banco **MySQL** real por meio de uma API REST em camadas (rotas, controllers, services e repositories). Não há mais dados simulados nas telas: o professor se cadastra, faz login e cada um vê somente os próprios dados.
+
+Na **N3**, o sistema passou a cobrir o ciclo completo da avaliação: o professor gera a prova com versões embaralhadas, baixa o PDF com o caderno de questões e o cartão-resposta com QR Code, fotografa o cartão preenchido com o celular e o sistema lê as respostas marcadas, calcula e salva a nota. O status da aplicação e da prova é atualizado automaticamente conforme as correções são registradas.
 
 ### Objetivos
 
@@ -74,7 +77,7 @@ provas e correções. Eles não possuem conta nem acesso ao sistema.
 
 ## 2. Requisitos
 
-Os requisitos abaixo representam a visão do produto. A coluna **Situação atual** indica o estado na entrega da N2.
+Os requisitos abaixo representam a visão do produto. A coluna **Situação atual** indica o estado na entrega da N3.
 
 ### 2.1 Requisitos Funcionais
 
@@ -90,7 +93,10 @@ Os requisitos abaixo representam a visão do produto. A coluna **Situação atua
 | RF08 | Corrigir provas pelo QR Code (câmera ou código) e lançar respostas manualmente. | Integrado ao MySQL |
 | RF09 | Calcular notas e disponibilizar relatórios e estatísticas da avaliação, com exportação CSV. | Integrado ao MySQL |
 | RF10 | Autenticar professores e restringir os dados ao professor responsável. | Integrado ao MySQL |
-| RF11 | Ler o cartão-resposta preenchido por imagem (visão computacional). | Implementado no navegador; calibração com fotos reais pendente |
+| RF11 | Ler o cartão-resposta preenchido por imagem (visão computacional). | Implementado no navegador e validado com foto de cartão impresso |
+| RF12 | Gerar o PDF da prova com o caderno de questões e, em página separada, o cartão-resposta com QR Code de cada aluno. | Implementado |
+| RF13 | Atualizar o status da aplicação e da prova conforme as correções são confirmadas. | Integrado ao MySQL |
+| RF14 | Permitir editar uma prova já aplicada enquanto não houver correção confirmada, gerando as versões novamente. | Integrado ao MySQL |
 
 ### 2.2 Requisitos Não Funcionais
 
@@ -104,6 +110,33 @@ Os requisitos abaixo representam a visão do produto. A coluna **Situação atua
 | RNF06 | A persistência deve utilizar banco relacional MySQL. |
 | RNF07 | Senhas e demais dados sensíveis não devem ser armazenados em texto puro. |
 | RNF08 | O projeto deve possuir comandos reproduzíveis para desenvolvimento, testes e build. |
+
+---
+
+## 3. Entrega N3
+
+A N3 é avaliada por uma demonstração ao vivo do fluxo completo. A tabela relaciona cada item avaliado com o que o sistema faz e onde isso fica no sistema.
+
+| Item | O que o sistema faz | Onde |
+|---|---|---|
+| 1. Criar conta | Cadastro de professor com senha protegida por hash | **Criar conta de professor** |
+| 2. Login | Sessão por cookie; somente professores acessam | Tela de entrada |
+| 3. Turma | Cadastro da turma e dos alunos (registros acadêmicos, sem login) | **Turmas** |
+| 4. Questão | Questões objetivas de 2 a 5 alternativas, com tags e busca | **Questões** |
+| 5. Gerar prova com embaralhamento | Prova com pontuação por questão; geração de versões com embaralhamento de questões e alternativas e atribuição de uma versão por aluno | **Provas → Gerar prova** |
+| 6. Verificar e editar a prova gerada | Gabarito de cada versão; edição da prova enquanto não há correção confirmada, com nova geração das versões | **Versões da prova → Ver gabarito** e **Editar** na prova |
+| 7. PDF da prova e cartão com QR | PDF com o caderno de questões e, em página separada, o cartão-resposta de cada aluno com QR Code | **Versões da prova → Baixar PDF** |
+| 8. Correção pelo QR no celular | Foto do cartão pela câmera ou pela galeria; o sistema lê o QR, endireita a foto, identifica as respostas marcadas, calcula e salva a nota | **Aplicação → Corrigir por QR Code** |
+| 9. Status após as correções | A aplicação passa a **Em correção** na primeira correção e a **Encerrada** quando todos os alunos ativos foram corrigidos; a prova é encerrada quando todas as suas aplicações estão encerradas | **Aplicações** e **Provas** |
+
+### Como demonstrar a correção automática
+
+1. Em **Versões da prova**, clique em **Baixar PDF** e imprima em tamanho real (100%).
+2. Preencha completamente um círculo por questão com caneta escura.
+3. No celular, abra a aplicação, toque em **Corrigir por QR Code** e use **Ler QR Code / abrir câmera → Capturar cartão** ou **Enviar foto do cartão**.
+4. Confira as respostas destacadas (verde: lida; amarelo: revisar), ajuste se necessário e toque em **Salvar correção e calcular nota**.
+
+Se a leitura falhar, o professor pode digitar o código do QR (botão **Copiar código** na tela de versões) e marcar as respostas manualmente; a nota é calculada da mesma forma pelo servidor.
 
 ---
 
@@ -155,17 +188,17 @@ Exibe as aplicações cadastradas (prova aplicada a uma turma) e seus estados.
 
 ### 4.8 Versões e QR Codes
 
-Mostra as versões geradas com embaralhamento de questões e alternativas, o gabarito de cada versão e os QR Codes de correção; com identificação, cada aluno recebe a sua versão e o seu QR Code. O botão **Cartão-resposta** monta uma página A4 com QR, quatro marcadores de alinhamento e a grade de alternativas da versão.
+Mostra as versões geradas com embaralhamento de questões e alternativas, o gabarito de cada versão e os QR Codes de correção; com identificação, cada aluno recebe a sua versão e o seu QR Code. O botão **Cartão-resposta** monta uma página A4 com QR, quatro marcadores de alinhamento e a grade de alternativas da versão, e **Baixar PDF** gera o caderno de questões da versão seguido do cartão-resposta de cada aluno, no mesmo layout lido pela correção automática.
 
 ![Versões da prova e QR Codes](docs/telas/versoes-qr.png)
 
 ### 4.9 Correção
 
-O professor pode abrir a câmera traseira e tocar em **Capturar cartão** ou usar **Enviar foto**. O navegador lê o QR, corrige a perspectiva pelos quatro marcadores e preenche as alternativas automaticamente. A imagem alinhada destaca leituras seguras em verde e rasuras/dúvidas em amarelo; qualquer resposta pode ser corrigida antes de salvar.
+O professor pode abrir a câmera traseira e tocar em **Capturar cartão** ou usar **Enviar foto do cartão**. O navegador lê o QR pelos pixels da imagem (biblioteca jsQR, compatível com Android e iPhone), usa a posição do QR para deixar a foto em pé quando ela foi tirada girada, corrige a perspectiva pelos quatro marcadores e preenche as alternativas automaticamente. A imagem alinhada destaca leituras seguras em verde e rasuras/dúvidas em amarelo; qualquer resposta pode ser corrigida antes de salvar.
 
 A foto é processada somente em memória no aparelho: não é enviada à API, gravada no banco, colocada em `localStorage` ou registrada em logs. O servidor recebe apenas QR, identificação e IDs das respostas, calcula a nota e a devolve para destaque na tela.
 
-O caminho anterior permanece disponível: se a câmera, o `BarcodeDetector` ou a leitura automática falhar, informe o código do QR e marque/revise as respostas manualmente. Câmera no Android exige HTTPS; o endereço publicado no Render já atende esse requisito.
+O caminho manual permanece disponível: se a câmera ou a leitura automática falhar, informe o código do QR e marque/revise as respostas manualmente. O acesso à câmera exige HTTPS; o endereço publicado no Render já atende esse requisito. Após salvar, a nota aparece em destaque com o botão **Corrigir outra prova**.
 
 ![Correção da prova](docs/telas/correcao.png)
 
@@ -365,9 +398,11 @@ Todas as telas operam sobre o MySQL. Nenhuma tela usa dados simulados; o arquivo
 
 Regras garantidas pela API: cada consulta filtra pelo professor da sessão;
 questões têm de 2 a 5 alternativas e exatamente uma correta; gravações com
-várias tabelas usam transação; prova arquivada não recebe nova aplicação; e as
-versões de uma aplicação só podem ser regeradas enquanto não houver correção
-confirmada.
+várias tabelas usam transação; prova arquivada ou encerrada não recebe nova
+aplicação; prova sem questões ou turma sem alunos não gera aplicação; o mesmo
+aluno não recebe duas correções confirmadas na mesma versão; as versões só podem
+ser regeradas, e a prova só pode ser editada, enquanto não houver correção
+confirmada; e o status da aplicação e da prova é recalculado a cada correção.
 
 ---
 
@@ -380,7 +415,8 @@ confirmada.
 | Build | Vite 8 | Ambiente de desenvolvimento e geração do bundle |
 | Estilos | CSS | Layout responsivo, tokens visuais e componentes |
 | Ícones | Lucide Vue | Iconografia da interface |
-| QR Code | qrcode | Imagens dos QR Codes de correção |
+| QR Code | qrcode e jsQR | Geração dos QR Codes e leitura do QR na foto do cartão em qualquer navegador |
+| PDF | pdfkit | PDF da prova com caderno de questões e cartão-resposta |
 | Servidor | Node.js e Express 5 | API REST em camadas, entrega do build e fallback da SPA |
 | Autenticação | bcrypt e cookie de sessão | Hash de senha e sessão do professor |
 | Banco de dados | MySQL 8.4 e MySQL2 | Persistência relacional e pool de conexões |
@@ -419,6 +455,7 @@ Correcao-Provas/
 │   ├── repositories/           # Acesso ao MySQL
 │   ├── routes/                 # Rotas Express por módulo
 │   ├── services/               # Regras de negócio
+│   ├── shared/                 # Layout do cartão-resposta usado pelo PDF, pela impressão e pelo leitor
 │   ├── app.js                  # Aplicação Express
 │   └── server.js               # Inicialização do servidor
 ├── .env.example                # Modelo das variáveis de ambiente
@@ -509,10 +546,10 @@ e associação manual. A API reserva `POST /api/corrections` para o QR Code e us
 `POST /api/corrections/manual` para o lançamento manual.
 
 O contrato físico do cartão fica centralizado em
-`src/shared/answerSheetLayout.js`: página normalizada de 1000 × 1414 px,
-quatro marcadores, até 20 questões e de duas a cinco alternativas. O gerador
-imprimível e o leitor importam esse mesmo arquivo; não duplique essas medidas
-em um futuro gerador de PDF.
+`src/shared/answerSheetLayout.mjs`: página normalizada de 1000 × 1414 px,
+quatro marcadores, até 20 questões e de duas a cinco alternativas. O cartão
+impresso pela tela de versões, o cartão do PDF gerado no servidor e o leitor
+usam esse mesmo arquivo; não duplique essas medidas.
 
 Se o volume MySQL já existia antes da autenticação, aplique uma vez a migração
 aditiva, sem apagar os dados:
@@ -552,12 +589,10 @@ Os testes do leitor não dependem de banco e podem ser executados isoladamente:
 npx vitest run src/client/services/answerSheetReader.test.js src/client/services/answerSheetCapture.test.js src/client/components/AnswerSheetPrint.test.js src/client/views/CorrecaoView.test.js src/client/views/AplicacaoVersoesView.test.js src/services/applicationVersionsService.test.js
 ```
 
-Esses testes usam cartões sintéticos determinísticos de 5 e 20 questões. Antes
-da apresentação da N3, ainda é obrigatório calibrar os limiares no site publicado
-com pelo menos 15 fotos de cartões realmente impressos e preenchidos a caneta,
-incluindo boa luz, sombra, inclinação, rasura e questão em branco. A meta é erro
-abaixo de 1% em condições normais; essa validação não é substituída pelos
-testes locais.
+Esses testes usam cartões sintéticos determinísticos de 5 e 20 questões. A
+leitura também foi validada no site publicado com foto, tirada pelo celular, de
+um cartão impresso e preenchido a caneta. Para melhores resultados, use boa luz,
+evite sombras e mantenha os quatro quadrados do cartão visíveis na foto.
 
 ### Build e execução de produção
 
