@@ -2,17 +2,18 @@ const PDFDocument = require('pdfkit');
 const QRCode = require('qrcode');
 const repository = require('../repositories/applicationVersionsRepository');
 const { ApiError } = require('../http/ApiError');
-const {
-    ANSWER_SHEET_LAYOUT: L,
-    QUESTIONS_PER_SHEET,
-    bubbleCenter
-} = require('./answerSheetLayout');
 
 const PT = 72 / 25.4;
 const mm = (value) => value * PT;
 const FONT_REGULAR = 'Helvetica';
 const FONT_BOLD = 'Helvetica-Bold';
-const letterOf = (order) => L.grid.letters[order - 1];
+const PAGE = { width: 210, height: 297 };
+const MARGIN = 15;
+const letterOf = (order) => String.fromCharCode(64 + Number(order));
+
+// O cartão usa o MESMO layout do leitor automático (src/shared/answerSheetLayout.mjs).
+// O arquivo é ESM porque também é usado no navegador; por isso o import dinâmico.
+const loadAnswerSheetLayout = () => import('../shared/answerSheetLayout.mjs');
 
 async function buildVersionPdf(versionId, teacherId) {
     const data = await repository.findPrintData(versionId, teacherId);
@@ -50,9 +51,11 @@ async function buildVersionPdf(versionId, teacherId) {
         doc.on('error', reject);
     });
 
+    const { getAnswerSheetGeometry } = await loadAnswerSheetLayout();
+
     drawExam(doc, data);
     for (const sheet of sheets) {
-        drawAnswerSheets(doc, data, sheet);
+        drawAnswerSheet(doc, data, sheet, getAnswerSheetGeometry);
     }
 
     doc.end();
@@ -62,15 +65,15 @@ async function buildVersionPdf(versionId, teacherId) {
 /* ---------- Folha de questões ---------- */
 function drawExam(doc, data) {
     const { head, questions } = data;
-    const left = L.margin;
-    const width = L.page.width - 2 * L.margin;
-    const bottom = L.page.height - L.margin;
+    const left = MARGIN;
+    const width = PAGE.width - 2 * MARGIN;
+    const bottom = PAGE.height - MARGIN;
     const date = new Date(head.applicationDate || Date.now()).toLocaleDateString('pt-BR');
-    let y = L.margin;
+    let y = MARGIN;
 
     const newPage = (first) => {
         doc.addPage();
-        y = L.margin;
+        y = MARGIN;
         doc.font(FONT_BOLD).fontSize(first ? 15 : 10).fillColor('#000')
             .text(head.examTitle, mm(left), mm(y), { width: mm(width) });
         y += first ? 8 : 5;
@@ -125,71 +128,85 @@ function drawExam(doc, data) {
     });
 }
 
-/* ---------- Cartão-resposta (página separada, feita para leitura por câmera) ---------- */
-function drawAnswerSheets(doc, data, sheet) {
+/* ---------- Cartão-resposta (página separada, no layout lido pela câmera) ---------- */
+function drawAnswerSheet(doc, data, sheet, getAnswerSheetGeometry) {
     const { head, questions } = data;
-    const pages = Math.max(1, Math.ceil(questions.length / QUESTIONS_PER_SHEET));
+    const geometry = getAnswerSheetGeometry(
+        questions.map((question) => question.alternatives.length)
+    );
+    // O layout é desenhado em uma página de 1000 x 1414 unidades (proporção A4).
+    const unit = mm(PAGE.width) / geometry.page.width;
+    const u = (value) => value * unit;
+    // Em SVG o y do texto é a linha de base; no pdfkit é o topo da linha.
+    const textTop = (baseline, size) => u(baseline - (size * 0.8));
 
-    for (let p = 0; p < pages; p++) {
-        doc.addPage();
-        doc.fillColor('#000').strokeColor('#000');
+    doc.addPage();
+    doc.fillColor('#000').strokeColor('#000');
 
-        for (const marker of L.markers.positions) {
-            doc.rect(mm(marker.x), mm(marker.y), mm(L.markers.size), mm(L.markers.size)).fill('#000');
-        }
+    for (const marker of geometry.markers) {
+        doc.rect(u(marker.x), u(marker.y), u(marker.width), u(marker.height)).fill('#000');
+    }
 
-        doc.image(sheet.qr, mm(L.qr.x), mm(L.qr.y), { width: mm(L.qr.size), height: mm(L.qr.size) });
+    doc.image(sheet.qr, u(geometry.qr.x), u(geometry.qr.y), {
+        width: u(geometry.qr.size),
+        height: u(geometry.qr.size)
+    });
 
-        const headerWidth = mm(L.header.width);
-        let y = L.header.y;
-        doc.fillColor('#000').font(FONT_BOLD).fontSize(13)
-            .text('CARTÃO-RESPOSTA', mm(L.header.x), mm(y), { width: headerWidth });
-        y += 8;
-        doc.font(FONT_REGULAR).fontSize(10);
+    const identity = sheet.student
+        ? `${sheet.student.name} · Matrícula ${sheet.student.registration}`
+        : 'Prova sem identificação do aluno';
+    const headerWidth = u(geometry.page.width - 360 - 110);
 
-        if (sheet.student) {
-            doc.text(`Aluno: ${sheet.student.name}`, mm(L.header.x), mm(y), { width: headerWidth });
-            y += 6;
-            doc.text(`Matrícula: ${sheet.student.registration}`, mm(L.header.x), mm(y), { width: headerWidth });
-            y += 6;
-        }
+    doc.fillColor('#000').font(FONT_BOLD).fontSize(u(30))
+        .text(head.examTitle, u(360), textTop(145, 30), { width: headerWidth, lineBreak: false, ellipsis: true });
+    doc.font(FONT_REGULAR).fontSize(u(23))
+        .text(`Versão ${head.versionNumber}`, u(360), textTop(190, 23), { width: headerWidth, lineBreak: false });
+    doc.fontSize(u(23))
+        .text(identity, u(360), textTop(230, 23), { width: headerWidth, lineBreak: false, ellipsis: true });
+    doc.fontSize(u(18))
+        .text('Preencha completamente um círculo por questão.', u(360), textTop(280, 18), {
+            width: headerWidth,
+            lineBreak: false
+        });
 
-        doc.text(
-            `Versão ${head.versionNumber}${pages > 1 ? `  (cartão ${p + 1}/${pages})` : ''}`,
-            mm(L.header.x), mm(y), { width: headerWidth }
-        );
-        y += 6;
-        doc.fontSize(8).text('Preencha totalmente o círculo, a caneta preta.',
-            mm(L.header.x), mm(y), { width: headerWidth });
-
-        const slice = questions.slice(p * QUESTIONS_PER_SHEET, (p + 1) * QUESTIONS_PER_SHEET);
-
-        slice.forEach((question, slot) => {
-            const first = bubbleCenter(slot, 0);
-
-            doc.font(FONT_REGULAR).fontSize(9).fillColor('#000').text(
-                String(p * QUESTIONS_PER_SHEET + slot + 1),
-                mm(first.x - L.grid.bubbleOffset - L.grid.numberWidth),
-                mm(first.y - 1.6),
-                { width: mm(L.grid.numberWidth - 2), align: 'right', lineBreak: false }
-            );
-
-            question.alternatives.forEach((alt, a) => {
-                const c = bubbleCenter(slot, a);
-
-                doc.font(FONT_REGULAR).fontSize(9).text(
-                    letterOf(alt.order),
-                    mm(c.x - L.grid.bubbleOffset),
-                    mm(c.y - 1.6),
-                    { width: mm(L.grid.letterWidth), lineBreak: false }
-                );
-
-                doc.circle(mm(c.x), mm(c.y), mm(L.grid.bubbleDiameter / 2))
-                    .lineWidth(mm(L.grid.strokeWidth))
-                    .stroke('#000');
-            });
+    const widestRow = geometry.rows.reduce(
+        (largest, row) => (row.bubbles.length > largest.bubbles.length ? row : largest),
+        geometry.rows[0]
+    );
+    const letterBox = u(40);
+    doc.font(FONT_BOLD).fontSize(u(20));
+    for (const bubble of widestRow.bubbles) {
+        doc.text(bubble.letter, u(bubble.x) - letterBox / 2, textTop(296, 20), {
+            width: letterBox,
+            align: 'center',
+            lineBreak: false
         });
     }
+
+    const numberBox = u(80);
+    geometry.rows.forEach((row) => {
+        doc.font(FONT_BOLD).fontSize(u(24)).fillColor('#000')
+            .text(`${row.order}.`, u(row.questionNumberX) - numberBox, textTop(row.y + 8, 24), {
+                width: numberBox,
+                align: 'right',
+                lineBreak: false
+            });
+
+        for (const bubble of row.bubbles) {
+            doc.circle(u(bubble.x), u(bubble.y), u(bubble.radius))
+                .lineWidth(u(3))
+                .stroke('#000');
+        }
+    });
+
+    const footerWidth = u(800);
+    doc.font(FONT_REGULAR).fontSize(u(17)).fillColor('#000')
+        .text('Não dobre o cartão e mantenha os quatro quadrados visíveis.',
+            u(500) - footerWidth / 2, textTop(1270, 17), {
+                width: footerWidth,
+                align: 'center',
+                lineBreak: false
+            });
 }
 
 module.exports = { buildVersionPdf };

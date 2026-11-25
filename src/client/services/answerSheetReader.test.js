@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
     ANSWER_SHEET_LAYOUT,
     getAnswerSheetGeometry
-} from '../../shared/answerSheetLayout';
+} from '../../shared/answerSheetLayout.mjs';
 import {
     AnswerSheetReadError,
     recognizeAnswerSheet

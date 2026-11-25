@@ -45,7 +45,10 @@ vi.mock('../services/correctionApi', () => ({
 
 vi.mock('../services/answerSheetCapture', () => ({
     clearCanvas,
+    decodeQrFromImageData: () => null,
     detectQrCode,
+    quarterTurnsToUpright: () => 0,
+    rotateImageData: (imageData) => imageData,
     drawRecognitionPreview,
     loadImageFile,
     sourceToImageData

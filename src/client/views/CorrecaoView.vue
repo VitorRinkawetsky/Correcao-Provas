@@ -4,7 +4,10 @@ import { useRoute, useRouter } from 'vue-router';
 import { ArrowLeft } from '@lucide/vue';
 import {
     clearCanvas,
+    decodeQrFromImageData,
     detectQrCode,
+    quarterTurnsToUpright,
+    rotateImageData,
     drawRecognitionPreview,
     loadImageFile,
     sourceToImageData
@@ -230,11 +233,22 @@ async function processImageSource(source) {
     message.value = '';
 
     try {
-        const imageData = sourceToImageData(source);
+        let imageData = sourceToImageData(source);
         let detectedCode = '';
 
+        // Lê o QR pelos pixels (funciona em qualquer navegador, inclusive iPhone)
+        // e usa a posição dele para deixar o cartão em pé antes de ler as bolinhas.
+        const qr = decodeQrFromImageData(imageData);
+        if (qr) {
+            detectedCode = qr.value;
+            imageData = rotateImageData(
+                imageData,
+                quarterTurnsToUpright(qr.center, imageData.width, imageData.height)
+            );
+        }
+
         try {
-            detectedCode = await detectQrCode(source);
+            if (!detectedCode) detectedCode = await detectQrCode(source, undefined, imageData);
         } catch (error) {
             if (!code.value.trim() && !context.value) throw error;
         }

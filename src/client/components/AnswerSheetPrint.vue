@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from 'vue';
 
-import { getAnswerSheetGeometry } from '../../shared/answerSheetLayout';
+import { getAnswerSheetGeometry } from '../../shared/answerSheetLayout.mjs';
 
 const props = defineProps({
     qrDataUrl: { type: String, required: true },

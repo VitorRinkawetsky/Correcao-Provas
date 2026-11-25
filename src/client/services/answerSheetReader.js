@@ -1,4 +1,4 @@
-import { getAnswerSheetGeometry } from '../../shared/answerSheetLayout';
+import { getAnswerSheetGeometry } from '../../shared/answerSheetLayout.mjs';
 
 const DEFAULT_OPTIONS = Object.freeze({
     adaptiveBlockSize: 48,
