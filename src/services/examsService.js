@@ -93,7 +93,9 @@ const buildDetails = async (exam, db = pool) => {
         ...exam,
         questions,
         questionCount: questions.length,
-        totalScore: questions.reduce((total, question) => total + Number(question.score || 0), 0)
+        totalScore: questions.reduce((total, question) => total + Number(question.score || 0), 0),
+        // O formulário usa isto para avisar que as versões serão geradas de novo.
+        hasApplications: await repository.hasApplications(exam.id, db)
     };
 };
 
@@ -117,6 +119,7 @@ const update = (id, teacherId, body) => transaction(async (db) => {
     const examId = positiveId(id);
     const current = await repository.findExam(examId, teacherId, db, true);
     if (!current) throw new ApiError(404, 'NOT_FOUND', 'Prova nao encontrada');
+
     if (current.status === 'closed' || current.status === 'archived') {
         throw new ApiError(
             409,
@@ -124,19 +127,33 @@ const update = (id, teacherId, body) => transaction(async (db) => {
             'Provas fechadas ou arquivadas nao podem ser editadas'
         );
     }
-    if (await repository.hasApplications(examId, db)) {
+
+    // Trava as aplicações e só então confere as correções (sem brecha entre os dois passos).
+    const applications = await repository.lockApplicationsByExam(examId, teacherId, db);
+
+    if (await repository.hasConfirmedCorrections(examId, db)) {
         throw new ApiError(
             409,
             'EXAM_LOCKED',
-            'Provas que ja possuem aplicacoes nao podem ser editadas'
+            'Esta prova já tem correções; crie uma nova aplicação.'
         );
     }
 
     const data = await validatePayload(body, teacherId, db);
     await repository.updateExam(examId, teacherId, data, db);
     await repository.replaceExamQuestions(examId, data.questions, db);
+
+    // As versões materializaram a ordem e o embaralhamento antigos: ficam desatualizadas.
+    const resetApplicationIds = applications
+        .filter((application) => application.status !== 'closed')
+        .map((application) => application.id);
+    await repository.resetVersionsForApplications(resetApplicationIds, db);
+
     const exam = await repository.findExam(examId, teacherId, db);
-    return buildDetails(exam, db);
+    return {
+        ...(await buildDetails(exam, db)),
+        resetApplicationIds
+    };
 });
 
 const archive = (id, teacherId) => transaction(async (db) => {

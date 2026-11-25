@@ -1,5 +1,7 @@
 
 const service = require('../services/applicationVersionsService');
+const { buildVersionPdf } = require('../services/applicationVersionPdfService');
+const { ApiError } = require('../http/ApiError');
 
 async function getAnswerKey(request, response, next) {
     try {
@@ -63,9 +65,32 @@ async function listAssignments(request, response, next) {
     }
 }
 
+async function downloadPdf(request, response, next) {
+    try {
+        const versionId = Number(request.params.versionId);
+
+        if (!Number.isSafeInteger(versionId) || versionId < 1) {
+            throw new ApiError(400, 'VALIDATION_ERROR', 'Identificador invalido', [{ field: 'versionId' }]);
+        }
+
+        const pdf = await buildVersionPdf(versionId, request.teacher?.id);
+
+        response.set({
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': `attachment; filename="prova-versao-${versionId}.pdf"`,
+            'Content-Length': pdf.length
+        });
+
+        return response.send(pdf);
+    } catch (error) {
+        return next(error);
+    }
+}
+
 module.exports = {
     getAnswerKey,
     generate,
     list,
-    listAssignments
+    listAssignments,
+    downloadPdf
 };

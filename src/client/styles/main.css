@@ -1983,3 +1983,12 @@ h2 {
         gap: 15px;
     }
 }
+
+.form-notice {
+    margin: 0 0 16px;
+    padding: 12px 16px;
+    border: 1px solid #f0c36d;
+    border-radius: 8px;
+    background: #fff8e6;
+    color: #7a5200;
+}

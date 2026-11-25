@@ -1,4 +1,3 @@
-
 const { Router } = require('express');
 const controller = require('../controllers/applicationVersionsController');
 const teacherContext = require('../middlewares/teacherContext');
@@ -24,6 +23,8 @@ router.get(
 );
 
 router.get('/:versionId/answer-key', controller.getAnswerKey);
+
+router.get('/:versionId/pdf', controller.downloadPdf);
 
 router.use(handleApiError);
 

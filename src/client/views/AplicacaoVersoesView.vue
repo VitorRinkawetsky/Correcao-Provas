@@ -1,4 +1,3 @@
-
 <script setup>
 import { computed, ref, onBeforeUnmount, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -27,6 +26,8 @@ const perguntasCartao = ref([])
 const carregandoCartao = ref(false)
 const erroCartao = ref('')
 const alvoImpressao = ref('')
+const baixandoPdf = ref(null) // id da versão cujo PDF está sendo gerado
+const erroPdf = ref('')
 
 // Com identificação, cada aluno tem um QR Code; sem identificação, o QR é da versão.
 const codigosCorrecao = computed(() => {
@@ -74,6 +75,23 @@ async function copiarCodigo(item) {
   }
 }
 
+/* ---------- Requisições ---------- */
+
+// Monta o Error de uma resposta HTTP que falhou (JSON ou texto) e avisa a sessão em caso de 401.
+function criarErroHttp(url, response, resultado) {
+  const serverError = typeof resultado.error === 'string'
+    ? resultado.error
+    : resultado.error?.message
+  const error = new Error(
+    resultado.message ||
+    serverError ||
+    `Erro HTTP ${response.status}`
+  )
+  error.status = response.status
+  if (response.status === 401) reportUnauthorized(url, error)
+  return error
+}
+
 async function requisicaoJson(url) {
   const response = await fetch(url, {
     credentials: 'include'
@@ -89,21 +107,45 @@ async function requisicaoJson(url) {
   }
 
   if (!response.ok) {
-    const serverError = typeof resultado.error === 'string'
-      ? resultado.error
-      : resultado.error?.message
-    const error = new Error(
-      resultado.message ||
-      serverError ||
-      `Erro HTTP ${response.status}`
-    )
-    error.status = response.status
-    if (response.status === 401) reportUnauthorized(url, error)
-    throw error
+    throw criarErroHttp(url, response, resultado)
   }
 
   return resultado
 }
+
+async function requisicaoArquivo(url) {
+  const response = await fetch(url, {
+    credentials: 'include'
+  })
+
+  if (!response.ok) {
+    let resultado = {}
+
+    try {
+      resultado = await response.json()
+    } catch {
+      resultado = { message: `Não foi possível gerar o arquivo (erro ${response.status}).` }
+    }
+
+    throw criarErroHttp(url, response, resultado)
+  }
+
+  return response.blob()
+}
+
+function salvarArquivo(blob, nomeArquivo) {
+  const blobUrl = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+
+  link.href = blobUrl
+  link.download = nomeArquivo
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(blobUrl)
+}
+
+/* ---------- Versões e gabarito ---------- */
 
 async function carregarVersoes() {
   carregando.value = true
@@ -158,7 +200,25 @@ async function abrirGabarito(versao) {
   }
 }
 
-function baixarPdf() {
+/* ---------- PDF da prova (folha de questões + cartão-resposta) ---------- */
+
+async function baixarPdfVersao(versao) {
+  baixandoPdf.value = versao.id
+  erroPdf.value = ''
+
+  try {
+    const blob = await requisicaoArquivo(`/api/application-versions/${versao.id}/pdf`)
+    salvarArquivo(blob, `prova-versao-${versao.versionNumber ?? versao.id}.pdf`)
+  } catch (error) {
+    erroPdf.value = error.message || 'Não foi possível baixar o PDF.'
+  } finally {
+    baixandoPdf.value = null
+  }
+}
+
+/* ---------- Impressão pelo navegador (gabarito e cartão antigo) ---------- */
+
+function imprimirGabarito() {
   alvoImpressao.value = 'gabarito'
   document.body.classList.add('answer-key-printing')
   window.addEventListener('afterprint', limparModoImpressao, { once: true })
@@ -267,18 +327,33 @@ onBeforeUnmount(limparModoImpressao)
           </p>
         </div>
 
-        <button
-          type="button"
-          class="botao"
-          :disabled="carregandoGabarito"
-          @click="abrirGabarito(versao)"
-        >
-          {{ carregandoGabarito && versaoSelecionada?.id === versao.id
-            ? 'Carregando...'
-            : 'Ver gabarito' }}
-        </button>
+        <div class="cartao-versao__acoes">
+          <button
+            type="button"
+            class="botao"
+            :disabled="carregandoGabarito"
+            @click="abrirGabarito(versao)"
+          >
+            {{ carregandoGabarito && versaoSelecionada?.id === versao.id
+              ? 'Carregando...'
+              : 'Ver gabarito' }}
+          </button>
+
+          <button
+            type="button"
+            class="botao"
+            :disabled="baixandoPdf !== null"
+            @click="baixarPdfVersao(versao)"
+          >
+            {{ baixandoPdf === versao.id ? 'Gerando PDF...' : 'Baixar PDF' }}
+          </button>
+        </div>
       </article>
     </div>
+
+    <p v-if="erroPdf" class="erro" role="alert">
+      {{ erroPdf }}
+    </p>
 
     <section
       v-if="!carregando && codigosCorrecao.length"
@@ -389,9 +464,9 @@ onBeforeUnmount(limparModoImpressao)
           v-if="gabarito.length"
           type="button"
           class="botao"
-          @click="baixarPdf"
+          @click="imprimirGabarito"
         >
-          Imprimir / salvar PDF
+          Imprimir gabarito
         </button>
       </template>
     </section>
@@ -439,6 +514,12 @@ h1 {
 
 .cartao-versao p {
   margin: 8px 0;
+}
+
+.cartao-versao__acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .botao {

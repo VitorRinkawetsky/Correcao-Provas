@@ -116,6 +116,9 @@ onMounted(async () => {
     }
 });
 
+// Prova já aplicada: salvar apaga as versões geradas (o servidor devolve resetApplicationIds).
+const hasApplications = computed(() => Boolean(existingExam.value?.hasApplications));
+
 const handleSubmit = async () => {
     if (!title.value.trim()) {
         titleError.value = true;
@@ -133,6 +136,16 @@ const handleSubmit = async () => {
         submitError.value = 'A pontuacao de cada questao deve ser maior que zero.';
         return;
     }
+
+    // Só pergunta depois de a prova passar nas validações acima.
+    if (isEditMode.value && hasApplications.value) {
+        const confirmed = window.confirm(
+            'Esta prova já tem aplicações. Ao salvar, as versões e os QR Codes gerados serão '
+            + 'apagados e as versões serão geradas novamente. Deseja continuar?'
+        );
+        if (!confirmed) return;
+    }
+
     titleError.value = false;
     submitError.value = '';
     saving.value = true;
@@ -149,7 +162,14 @@ const handleSubmit = async () => {
 
     try {
         const savedExam = isEditMode.value ? await updateExam(examId.value, payload) : await createExam(payload);
-        router.push(`/provas/${savedExam.id}`);
+        const resetIds = savedExam.resetApplicationIds ?? [];
+
+        if (resetIds.length > 0) {
+            // Leva o professor para a aplicação, onde as versões são geradas de novo.
+            await router.push({ name: 'application-details', params: { id: resetIds[0] } });
+        } else {
+            await router.push(`/provas/${savedExam.id}`);
+        }
     } catch (error) {
         submitError.value = error.message;
     } finally {
@@ -178,6 +198,11 @@ const cancelHref = computed(() => (isEditMode.value ? `/provas/${examId.value}` 
         <p v-else-if="loadError" class="empty-state">{{ loadError }}</p>
 
         <form v-else class="exam-form" novalidate @submit.prevent="handleSubmit">
+            <p v-if="isEditMode && hasApplications" class="form-notice" role="status">
+                Esta prova já tem aplicações. Ao salvar, as versões geradas serão apagadas
+                e você precisará gerá-las novamente.
+            </p>
+
             <div class="form-field">
                 <label class="form-label" for="exam-title">Título</label>
                 <input
